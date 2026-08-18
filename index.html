@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A private, local passkey and WebAuthn test bench.">
+  <title>Passkey Tester</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#"><span class="brand-mark" aria-hidden="true">P</span><span>Passkey Tester</span></a>
+    <div class="local-pill"><span></span> Running locally</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">WebAuthn test bench</div>
+      <h1>See how your passkeys<br><em>really behave.</em></h1>
+      <p>Create and authenticate passkeys across browsers and password managers. Everything stays in this browser.</p>
+      <div class="support" id="support"><span class="support-icon">…</span><div><strong>Checking this browser</strong><small>WebAuthn capability detection is running</small></div></div>
+    </section>
+
+    <section class="workspace" aria-label="Passkey testing controls">
+      <nav class="tabs" role="tablist">
+        <button class="tab active" role="tab" aria-selected="true" data-tab="create">Create passkey</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="authenticate">Authenticate</button>
+      </nav>
+
+      <div class="panel active" id="create-panel" role="tabpanel">
+        <div class="panel-heading"><div><span class="step">01</span><h2>Create a new passkey</h2></div><p>Choose the options you want to test, then invoke your browser or password manager.</p></div>
+        <div class="form-grid">
+          <label>Display name<input id="displayName" value="Test User" autocomplete="off"></label>
+          <label>Username<input id="username" value="test@example.com" autocomplete="off"></label>
+          <label>Authenticator
+            <select id="attachment"><option value="">Any authenticator</option><option value="platform">This device (platform)</option><option value="cross-platform">Security key / other device</option></select>
+          </label>
+          <label>Resident key
+            <select id="residentKey"><option value="preferred">Preferred</option><option value="required">Required</option><option value="discouraged">Discouraged</option></select>
+          </label>
+          <label>User verification
+            <select id="createVerification"><option value="preferred">Preferred</option><option value="required">Required</option><option value="discouraged">Discouraged</option></select>
+          </label>
+          <label>Attestation
+            <select id="attestation"><option value="none">None</option><option value="indirect">Indirect</option><option value="direct">Direct</option><option value="enterprise">Enterprise</option></select>
+          </label>
+        </div>
+        <label class="check"><input id="excludeExisting" type="checkbox" checked><span>Exclude the last created credential</span></label>
+        <button class="primary" id="createButton"><span>＋</span> Create passkey</button>
+      </div>
+
+      <div class="panel" id="authenticate-panel" role="tabpanel" hidden>
+        <div class="panel-heading"><div><span class="step">02</span><h2>Authenticate</h2></div><p>Test the most recently created credential, or allow any discoverable passkey for localhost.</p></div>
+        <div class="form-grid auth-grid">
+          <label>User verification
+            <select id="authVerification"><option value="preferred">Preferred</option><option value="required">Required</option><option value="discouraged">Discouraged</option></select>
+          </label>
+          <label>Credential selection
+            <select id="credentialSelection"><option value="saved">Last created credential</option><option value="discoverable">Any discoverable credential</option></select>
+          </label>
+        </div>
+        <button class="primary" id="authButton"><span>→</span> Authenticate passkey</button>
+        <p class="hint" id="savedHint">No credential has been created in this session yet.</p>
+      </div>
+    </section>
+
+    <section class="results" id="results" aria-live="polite">
+      <div class="results-title"><div><span class="step">03</span><h2>Response inspector</h2></div><div class="result-actions"><button id="copyButton">Copy JSON</button><button id="clearButton">Clear</button></div></div>
+      <div class="empty" id="emptyState"><div class="empty-icon">{ }</div><strong>Results will appear here</strong><span>Create or authenticate a passkey to inspect the browser response.</span></div>
+      <div id="resultContent" hidden><div class="status-line" id="statusLine"></div><pre><code id="resultJson"></code></pre></div>
+    </section>
+  </main>
+  <footer><span>Private by design — no data leaves your browser.</span><span>Built with the Web Authentication API</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
