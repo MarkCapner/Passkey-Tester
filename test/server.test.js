@@ -23,7 +23,7 @@ test("serves the application entry point", async () => {
 });
 
 test("serves JavaScript and CSS assets instead of rejecting them", async () => {
-  for (const [asset, type] of [["app.js", "text/javascript"], ["styles.css", "text/css"]]) {
+  for (const [asset, type] of [["app.js", "text/javascript"], ["webauthn-json.js", "text/javascript"], ["styles.css", "text/css"]]) {
     const response = await fetch(`${origin}/${asset}`);
     assert.equal(response.status, 200, asset);
     assert.match(response.headers.get("content-type"), new RegExp(`^${type}`));
