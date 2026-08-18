@@ -1,0 +1,13 @@
+{
+  "name": "local-passkey-tester",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A dependency-free local WebAuthn and passkey test bench",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
