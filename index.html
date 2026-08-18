@@ -28,37 +28,18 @@
       </nav>
 
       <div class="panel active" id="create-panel" role="tabpanel">
-        <div class="panel-heading"><div><span class="step">01</span><h2>Create a new passkey</h2></div><p>Choose the options you want to test, then invoke your browser or password manager.</p></div>
-        <div class="form-grid">
-          <label>Display name<input id="displayName" value="Test User" autocomplete="off"></label>
-          <label>Username<input id="username" value="test@example.com" autocomplete="off"></label>
-          <label>Authenticator
-            <select id="attachment"><option value="">Any authenticator</option><option value="platform">This device (platform)</option><option value="cross-platform">Security key / other device</option></select>
-          </label>
-          <label>Resident key
-            <select id="residentKey"><option value="preferred">Preferred</option><option value="required">Required</option><option value="discouraged">Discouraged</option></select>
-          </label>
-          <label>User verification
-            <select id="createVerification"><option value="preferred">Preferred</option><option value="required">Required</option><option value="discouraged">Discouraged</option></select>
-          </label>
-          <label>Attestation
-            <select id="attestation"><option value="none">None</option><option value="indirect">Indirect</option><option value="direct">Direct</option><option value="enterprise">Enterprise</option></select>
-          </label>
-        </div>
-        <label class="check"><input id="excludeExisting" type="checkbox" checked><span>Exclude the last created credential</span></label>
+        <div class="panel-heading"><div><span class="step">01</span><h2>Create a new passkey</h2></div><p>Edit every public-key field, or wrap it in <code>{ "publicKey": { ... } }</code> to set outer credential options too. Binary fields use base64url strings.</p></div>
+        <div class="editor-heading"><label for="createJson">PublicKeyCredentialCreationOptions (JSON)</label><div><button class="secondary" id="createReset">Reset example</button><button class="secondary" id="addExcluded">Exclude last credential</button></div></div>
+        <textarea class="json-editor" id="createJson" spellcheck="false" aria-describedby="createJsonHint"></textarea>
+        <p class="hint" id="createJsonHint">Add any WebAuthn option or extension. The challenge and user ID in the example are regenerated whenever it is reset.</p>
         <button class="primary" id="createButton"><span>＋</span> Create passkey</button>
       </div>
 
       <div class="panel" id="authenticate-panel" role="tabpanel" hidden>
-        <div class="panel-heading"><div><span class="step">02</span><h2>Authenticate</h2></div><p>Test the most recently created credential, or allow any discoverable passkey for localhost.</p></div>
-        <div class="form-grid auth-grid">
-          <label>User verification
-            <select id="authVerification"><option value="preferred">Preferred</option><option value="required">Required</option><option value="discouraged">Discouraged</option></select>
-          </label>
-          <label>Credential selection
-            <select id="credentialSelection"><option value="saved">Last created credential</option><option value="discoverable">Any discoverable credential</option></select>
-          </label>
-        </div>
+        <div class="panel-heading"><div><span class="step">02</span><h2>Authenticate</h2></div><p>Edit every public-key field, or use a <code>publicKey</code> wrapper to set outer options such as <code>mediation</code>. Leave <code>allowCredentials</code> empty for discoverable credentials.</p></div>
+        <div class="editor-heading"><label for="authJson">PublicKeyCredentialRequestOptions (JSON)</label><div><button class="secondary" id="authReset">Reset example</button><button class="secondary" id="addAllowed">Allow last credential</button></div></div>
+        <textarea class="json-editor" id="authJson" spellcheck="false" aria-describedby="authJsonHint"></textarea>
+        <p class="hint" id="authJsonHint">Add any request option or client extension input. The example challenge is regenerated whenever it is reset.</p>
         <button class="primary" id="authButton"><span>→</span> Authenticate passkey</button>
         <p class="hint" id="savedHint">No credential has been created in this session yet.</p>
       </div>
@@ -71,6 +52,7 @@
     </section>
   </main>
   <footer><span>Private by design — no data leaves your browser.</span><span>Built with the Web Authentication API</span></footer>
+  <script src="webauthn-json.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

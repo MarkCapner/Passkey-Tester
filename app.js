@@ -8,6 +8,7 @@ function toBase64Url(value) {
   bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
+function randomBase64Url(length = 32) { return toBase64Url(randomBytes(length)); }
 function decodeJson(buffer) {
   try { return JSON.parse(new TextDecoder().decode(buffer)); } catch { return null; }
 }
@@ -37,37 +38,65 @@ function showError(error) {
 }
 function setBusy(button, busy) { button.disabled = busy; button.dataset.label ||= button.innerHTML; button.innerHTML = busy ? "Waiting for authenticator…" : button.dataset.label; }
 
+function creationExample() {
+  return {
+    challenge: randomBase64Url(),
+    rp: { name: "Local Passkey Tester", id: location.hostname },
+    user: { id: randomBase64Url(), name: "test@example.com", displayName: "Test User" },
+    pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }, { type: "public-key", alg: -8 }],
+    timeout: 60000,
+    excludeCredentials: [],
+    authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
+    attestation: "none",
+    extensions: {}
+  };
+}
+
+function requestExample() {
+  return { challenge: randomBase64Url(), rpId: location.hostname, timeout: 60000, allowCredentials: [], userVerification: "preferred", extensions: {} };
+}
+
+function setEditor(selector, value) { $(selector).value = JSON.stringify(value, null, 2); }
+function readEditor(selector) { return JSON.parse($(selector).value); }
+function prepareCredentialOptions(selector, operation) {
+  const input = readEditor(selector);
+  const publicKeyJson = input.publicKey || input;
+  const outerOptions = input.publicKey ? input : {};
+  return { input, options: { ...outerOptions, publicKey: WebAuthnJson.parseOptionsFromJson(publicKeyJson, operation) } };
+}
+function credentialDescriptor() {
+  if (!state.credential) throw new Error("Create a passkey first before inserting its credential ID.");
+  const descriptor = { type: "public-key", id: toBase64Url(state.credential.rawId) };
+  const transports = transportInfo(state.credential.response);
+  if (transports.length) descriptor.transports = transports;
+  return descriptor;
+}
+function insertLastCredential(selector, property) {
+  try {
+    const input = readEditor(selector);
+    const options = input.publicKey || input;
+    options[property] = [credentialDescriptor()];
+    setEditor(selector, input);
+  } catch (error) { showError(error); }
+}
+
 async function createPasskey() {
   const button = $("#createButton"); setBusy(button, true);
   try {
-    const userId = randomBytes(32);
-    const publicKey = {
-      challenge: randomBytes(), rp: { name: "Local Passkey Tester", id: location.hostname },
-      user: { id: userId, name: $("#username").value.trim(), displayName: $("#displayName").value.trim() },
-      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }, { type: "public-key", alg: -8 }], timeout: 60000,
-      authenticatorSelection: { residentKey: $("#residentKey").value, userVerification: $("#createVerification").value },
-      attestation: $("#attestation").value
-    };
-    const attachment = $("#attachment").value;
-    if (attachment) publicKey.authenticatorSelection.authenticatorAttachment = attachment;
-    if (state.credential && $("#excludeExisting").checked) publicKey.excludeCredentials = [{ type: "public-key", id: state.credential.rawId, transports: transportInfo(state.credential.response) }];
-    const credential = await navigator.credentials.create({ publicKey });
+    const request = prepareCredentialOptions("#createJson", "create");
+    const credential = await navigator.credentials.create(request.options);
     state.credential = credential;
     $("#savedHint").textContent = `Ready to authenticate credential ${credential.id.slice(0, 18)}…`;
-    showResult("Passkey created successfully", { request: { rpId: publicKey.rp.id, username: publicKey.user.name, authenticatorSelection: publicKey.authenticatorSelection, attestation: publicKey.attestation }, credential: serializedCredential(credential, "create") });
+    showResult("Passkey created successfully", { request: request.input, credential: serializedCredential(credential, "create") });
   } catch (error) { showError(error); } finally { setBusy(button, false); }
 }
 
 async function authenticatePasskey() {
   const button = $("#authButton"); setBusy(button, true);
   try {
-    const publicKey = { challenge: randomBytes(), rpId: location.hostname, timeout: 60000, userVerification: $("#authVerification").value };
-    if ($("#credentialSelection").value === "saved") {
-      if (!state.credential) throw new Error("Create a passkey first, or choose any discoverable credential.");
-      publicKey.allowCredentials = [{ type: "public-key", id: state.credential.rawId, transports: transportInfo(state.credential.response) }];
-    }
-    const credential = await navigator.credentials.get({ publicKey });
-    showResult("Authentication completed successfully", { request: { rpId: publicKey.rpId, userVerification: publicKey.userVerification, credentialSelection: publicKey.allowCredentials ? "saved" : "discoverable" }, credential: serializedCredential(credential, "authenticate") });
+    const request = prepareCredentialOptions("#authJson", "get");
+    const credential = await navigator.credentials.get(request.options);
+    showResult("Authentication completed successfully", { request: request.input, credential: serializedCredential(credential, "authenticate") });
   } catch (error) { showError(error); } finally { setBusy(button, false); }
 }
 
@@ -77,10 +106,16 @@ document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click",
 }));
 $("#createButton").addEventListener("click", createPasskey);
 $("#authButton").addEventListener("click", authenticatePasskey);
+$("#createReset").addEventListener("click", () => setEditor("#createJson", creationExample()));
+$("#authReset").addEventListener("click", () => setEditor("#authJson", requestExample()));
+$("#addExcluded").addEventListener("click", () => insertLastCredential("#createJson", "excludeCredentials"));
+$("#addAllowed").addEventListener("click", () => insertLastCredential("#authJson", "allowCredentials"));
 $("#clearButton").addEventListener("click", () => { state.lastResult = null; $("#emptyState").hidden = false; $("#resultContent").hidden = true; });
 $("#copyButton").addEventListener("click", async () => { if (!state.lastResult) return; await navigator.clipboard.writeText(JSON.stringify(state.lastResult, null, 2)); $("#copyButton").textContent = "Copied!"; setTimeout(() => { $("#copyButton").textContent = "Copy JSON"; }, 1200); });
 
 (async () => {
+  setEditor("#createJson", creationExample());
+  setEditor("#authJson", requestExample());
   const supported = window.isSecureContext && "PublicKeyCredential" in window;
   let platform = false;
   if (supported && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) platform = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
