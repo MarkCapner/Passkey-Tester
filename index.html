@@ -38,7 +38,8 @@
 
       <div class="panel" id="authenticate-panel" role="tabpanel" hidden>
         <div class="panel-heading"><div><span class="step">02</span><h2>Authenticate</h2></div><p>Edit every public-key field, or use a <code>publicKey</code> wrapper to set outer options such as <code>mediation</code>. Leave <code>allowCredentials</code> empty for discoverable credentials.</p></div>
-        <div class="editor-heading"><label for="authJson">PublicKeyCredentialRequestOptions (JSON)</label><div><button class="secondary" id="authReset">Reset example</button><button class="secondary" id="addAllowed">Allow last credential</button></div></div>
+        <div class="editor-heading"><label for="authJson">PublicKeyCredentialRequestOptions (JSON)</label><div><button class="secondary" id="authReset">Reset example</button><button class="secondary" id="addAllowed">Choose allowed credentials</button></div></div>
+        <div class="credential-picker" id="allowPicker" hidden><div class="picker-heading"><strong>Allow saved credentials</strong><button class="secondary" id="applyAllowed">Apply selection</button></div><div id="allowChoices"></div><p>Credentials observed in any browser using this server are available here.</p></div>
         <textarea class="json-editor" id="authJson" spellcheck="false" aria-describedby="authJsonHint"></textarea>
         <p class="hint" id="authJsonHint">Add any request option or client extension input. The example challenge is regenerated whenever it is reset.</p>
         <button class="primary" id="authButton"><span>→</span> Authenticate passkey</button>
