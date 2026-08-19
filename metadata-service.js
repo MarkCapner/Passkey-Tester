@@ -1,45 +1,45 @@
 const { readFile } = require("node:fs/promises");
 const { join } = require("node:path");
 
-const METADATA_BLOB_PATH = join(__dirname, "blob.jwt");
+const METADATA_PATH = join(__dirname, "combined_aaguid.json");
 
-function parseMetadataBlob(blob) {
-  const parts = blob.trim().split(".");
-  if (parts.length !== 3 || !parts[1]) throw new Error("FIDO metadata BLOB has an invalid JWT format");
-
-  let payload;
+function parseMetadata(contents) {
+  let metadata;
   try {
-    payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+    metadata = JSON.parse(contents);
   } catch {
-    throw new Error("FIDO metadata BLOB has an invalid payload");
+    throw new Error("Combined AAGUID metadata has invalid JSON");
   }
-  if (!Array.isArray(payload.entries)) throw new Error("FIDO metadata BLOB has no entries");
-  return payload.entries;
+  if (!metadata || Array.isArray(metadata) || typeof metadata !== "object") {
+    throw new Error("Combined AAGUID metadata must be an object");
+  }
+  return metadata;
 }
 
-function normalizeEntry(entry) {
-  const statement = entry.metadataStatement || {};
-  const name = statement.friendlyNames?.["en-US"] ||
-    Object.values(statement.friendlyNames || {})[0] || statement.description || null;
+function normalizeEntry(aaguid, entry) {
+  if (!entry || typeof entry !== "object") return null;
+  const name = typeof entry.name === "string" ? entry.name : null;
   return {
-    aaguid: entry.aaguid,
+    aaguid,
     name,
-    description: statement.description || name,
-    icon: statement.icon || null
+    description: name,
+    // These icons are shown on the app's light card background, so prefer the
+    // dark artwork and retain the light version only as a compatibility fallback.
+    icon: entry.icon_dark || entry.icon_light || null
   };
 }
 
-function createMetadataService({ readFileImpl = readFile, metadataPath = METADATA_BLOB_PATH } = {}) {
-  let cachedEntries = null;
+function createMetadataService({ readFileImpl = readFile, metadataPath = METADATA_PATH } = {}) {
+  let cachedMetadata = null;
   let pendingRequest = null;
 
-  async function entries() {
-    if (cachedEntries) return cachedEntries;
+  async function metadata() {
+    if (cachedMetadata) return cachedMetadata;
     if (!pendingRequest) {
       pendingRequest = readFileImpl(metadataPath, "utf8")
         .then((contents) => {
-          cachedEntries = parseMetadataBlob(contents);
-          return cachedEntries;
+          cachedMetadata = parseMetadata(contents);
+          return cachedMetadata;
         })
         .finally(() => { pendingRequest = null; });
     }
@@ -48,11 +48,12 @@ function createMetadataService({ readFileImpl = readFile, metadataPath = METADAT
 
   async function find(aaguid) {
     const normalized = aaguid.toLowerCase();
-    const entry = (await entries()).find((item) => item.aaguid?.toLowerCase() === normalized);
-    return entry ? normalizeEntry(entry) : null;
+    const entries = await metadata();
+    const storedAaguid = Object.keys(entries).find((key) => key.toLowerCase() === normalized);
+    return storedAaguid ? normalizeEntry(storedAaguid, entries[storedAaguid]) : null;
   }
 
   return { find };
 }
 
-module.exports = { METADATA_BLOB_PATH, createMetadataService, parseMetadataBlob };
+module.exports = { METADATA_PATH, createMetadataService, parseMetadata };

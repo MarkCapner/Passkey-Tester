@@ -1,43 +1,44 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { METADATA_BLOB_PATH, createMetadataService, parseMetadataBlob } = require("../metadata-service");
+const { METADATA_PATH, createMetadataService, parseMetadata } = require("../metadata-service");
 
-function jwt(payload) {
-  return `${Buffer.from('{"alg":"RS256"}').toString("base64url")}.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.signature`;
-}
-
-test("decodes entries from a FIDO metadata BLOB JWT", () => {
-  const entries = [{ aaguid: "ABC", metadataStatement: { description: "Authenticator" } }];
-  assert.deepEqual(parseMetadataBlob(jwt({ no: 1, entries })), entries);
+test("parses combined AAGUID metadata", () => {
+  assert.deepEqual(parseMetadata('{"ABC":{"name":"Authenticator"}}'), {
+    ABC: { name: "Authenticator" }
+  });
 });
 
-test("rejects malformed FIDO metadata BLOBs", () => {
-  assert.throws(() => parseMetadataBlob("not-a-jwt"), /invalid JWT format/);
-  assert.throws(() => parseMetadataBlob("header.!!!.signature"), /invalid payload/);
-  assert.throws(() => parseMetadataBlob(jwt({ no: 1 })), /no entries/);
+test("rejects malformed combined AAGUID metadata", () => {
+  assert.throws(() => parseMetadata("not-json"), /invalid JSON/);
+  assert.throws(() => parseMetadata("[]"), /must be an object/);
+  assert.throws(() => parseMetadata("null"), /must be an object/);
 });
 
-test("reads the local BLOB once and resolves nested metadata by AAGUID", async () => {
+test("reads combined metadata once and prefers the dark icon", async () => {
   let reads = 0;
   const service = createMetadataService({ readFileImpl: async (path, encoding) => {
     reads++;
-    assert.equal(path, METADATA_BLOB_PATH);
+    assert.equal(path, METADATA_PATH);
     assert.equal(encoding, "utf8");
-    return jwt({ entries: [{
-      aaguid: "ABC",
-      metadataStatement: {
-        friendlyNames: { "en-US": "Authenticator name" },
-        description: "Authenticator description",
-        icon: "data:image/svg+xml;base64,abc"
-      }
-    }] });
+    return JSON.stringify({ ABC: {
+      name: "Authenticator name",
+      icon_light: "data:image/png;base64,light",
+      icon_dark: "data:image/png;base64,dark"
+    } });
   } });
   assert.deepEqual(await service.find("abc"), {
     aaguid: "ABC",
     name: "Authenticator name",
-    description: "Authenticator description",
-    icon: "data:image/svg+xml;base64,abc"
+    description: "Authenticator name",
+    icon: "data:image/png;base64,dark"
   });
   assert.equal(await service.find("missing"), null);
   assert.equal(reads, 1);
+});
+
+test("falls back to a light icon when dark artwork is unavailable", async () => {
+  const service = createMetadataService({ readFileImpl: async () => JSON.stringify({
+    abc: { name: "Authenticator", icon_light: "data:image/png;base64,light" }
+  }) });
+  assert.equal((await service.find("ABC")).icon, "data:image/png;base64,light");
 });
