@@ -66,9 +66,9 @@ function creationExample() {
     pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }, { type: "public-key", alg: -8 }],
     timeout: 60000,
     excludeCredentials: [],
-    authenticatorSelection: { residentKey: "preferred", userVerification: "preferred" },
-    attestation: "none",
-    extensions: {}
+    authenticatorSelection: { authenticatorAttachment: "platform", requireResidentKey: true, residentKey: "required", userVerification: "required" },
+    attestation: "indirect",
+    extensions: { uvm: true, credProps: true }
   };
 }
 
