@@ -25,7 +25,7 @@ PORT=8080 npm start
 - Required, preferred, and discouraged user verification
 - None, indirect, direct, and enterprise attestation conveyance
 - Authentication using the last credential or any discoverable credential
-- Automatic password-manager identification from the authenticator AAGUID when the provider is known
+- Automatic authenticator identification from its AAGUID using the FIDO Metadata Service
 - A persistent, selectable credential list for testing exclusion behavior with several synced passkeys
 - Browser response fields, extensions, transports, and client data
 - Fully editable creation and authentication option JSON, including exclude/allow credential lists and extension inputs
@@ -33,6 +33,6 @@ PORT=8080 npm start
 
 The JSON editors use the standard WebAuthn JSON representation: binary fields such as `challenge`, `user.id`, and credential descriptor IDs are base64url strings. Use **Choose excluded credentials** to select any credentials previously observed in that browser, or **Allow last credential** to insert the credential created during the current session. Both editors accept either the `publicKey` options directly or a `{ "publicKey": { ... } }` wrapper.
 
-> This is a browser API diagnostic tool, not a production relying party. It intentionally has no backend and does not verify signatures or persist public keys.
+> This is a browser API diagnostic tool, not a production relying party. Its small local server proxies and caches public FIDO metadata; it does not verify attestation signatures or persist public keys.
 
-On creation, the tester extracts the AAGUID from authenticator data and maps known AAGUIDs to their password manager automatically. Unknown or privacy-redacted AAGUIDs remain labelled **Unknown authenticator**. A browser cannot enumerate the credentials in a password manager: to test a synced passkey in another browser, authenticate with the discoverable credential once there. The returned credential ID is then saved locally and becomes available in **Choose excluded credentials**. Test history and saved credential IDs remain in the current browser's local storage.
+On creation, the tester extracts the AAGUID from authenticator data and asks the local server to resolve it against the FIDO Metadata Service (MDS). The MDS blob is cached for 24 hours, so it is not downloaded for every passkey. Unknown, privacy-redacted, or unregistered AAGUIDs remain labelled **Unknown authenticator**, and an MDS outage never prevents credential creation. A browser cannot enumerate the credentials in a password manager: to test a synced passkey in another browser, authenticate with the discoverable credential once there. The returned credential ID is then saved locally and becomes available in **Choose excluded credentials**. Test history and saved credential IDs remain in the current browser's local storage.

@@ -6,9 +6,15 @@ let server;
 let origin;
 
 before(async () => {
-  server = createServer();
+  server = createServer({ metadataService: { find: async (aaguid) => aaguid.startsWith("b539") ? { aaguid, description: "Test authenticator", statusReports: [] } : null } });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   origin = `http://127.0.0.1:${server.address().port}`;
+});
+
+test("resolves AAGUID metadata through the server endpoint", async () => {
+  const response = await fetch(`${origin}/api/metadata/b5397666-4885-aa6b-cebf-e52262a439a2`);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).description, "Test authenticator");
 });
 
 after(async () => {

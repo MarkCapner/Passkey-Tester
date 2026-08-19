@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { inspectAttestation } = require("../authenticator-info");
+const { inspectAttestation, lookupMetadata } = require("../authenticator-info");
 
 function attestationWithAaguid(aaguid) {
   const hex = aaguid.replaceAll("-", "");
@@ -11,10 +11,18 @@ function attestationWithAaguid(aaguid) {
   return Uint8Array.from([0xa1, 0x68, ...key, 0x58, authData.length, ...authData]).buffer;
 }
 
-test("extracts an AAGUID and identifies a known password manager", () => {
+test("extracts an AAGUID without relying on a hard-coded provider map", () => {
   assert.deepEqual(inspectAttestation(attestationWithAaguid("b5397666-4885-aa6b-cebf-e52262a439a2")), {
-    aaguid: "b5397666-4885-aa6b-cebf-e52262a439a2", passwordManager: "1Password"
+    aaguid: "b5397666-4885-aa6b-cebf-e52262a439a2", passwordManager: "Unknown authenticator"
   });
+});
+
+test("looks up an AAGUID through the local metadata endpoint", async () => {
+  const metadata = await lookupMetadata("b5397666-4885-aa6b-cebf-e52262a439a2", async (url) => {
+    assert.equal(url, "/api/metadata/b5397666-4885-aa6b-cebf-e52262a439a2");
+    return { ok: true, status: 200, json: async () => ({ description: "Example authenticator" }) };
+  });
+  assert.equal(metadata.description, "Example authenticator");
 });
 
 test("keeps an unrecognized AAGUID visible without guessing a provider", () => {

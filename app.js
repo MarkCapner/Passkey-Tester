@@ -127,6 +127,12 @@ async function createPasskey() {
     const credential = await navigator.credentials.create(request.options);
     state.credential = credential;
     const detected = AuthenticatorInfo.inspectAttestation(credential.response.attestationObject);
+    try {
+      const metadata = await AuthenticatorInfo.lookupMetadata(detected.aaguid);
+      if (metadata?.description) detected.passwordManager = metadata.description;
+    } catch {
+      // Metadata is informational; creation still succeeds when MDS is unavailable.
+    }
     state.passwordManager = detected.passwordManager;
     state.aaguid = detected.aaguid;
     saveCredential(credential, detected);

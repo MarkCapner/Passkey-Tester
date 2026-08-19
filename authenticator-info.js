@@ -3,14 +3,6 @@
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.AuthenticatorInfo = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  const AAGUID_MANAGERS = {
-    "b5397666-4885-aa6b-cebf-e52262a439a2": "1Password",
-    "dd4ec289-e01d-41c9-bb89-70fa845d4bf2": "Apple Passwords / iCloud Keychain",
-    "d548826e-79b4-db40-a3d8-11116f7e8349": "Bitwarden",
-    "531126d6-e717-415c-9320-3d9aa6981239": "Dashlane",
-    "ea9b8d66-4d01-1d21-3ce4-b6b48cb575d4": "Google Password Manager"
-  };
-
   function cborValue(bytes, offset = 0) {
     const initial = bytes[offset++];
     const major = initial >> 5;
@@ -51,9 +43,17 @@
       const authData = decoded.authData;
       if (!(authData instanceof Uint8Array) || authData.length < 53 || !(authData[32] & 0x40)) return { aaguid: null, passwordManager: "Unknown authenticator" };
       const aaguid = formatAaguid(authData.slice(37, 53));
-      return { aaguid, passwordManager: AAGUID_MANAGERS[aaguid] || "Unknown authenticator" };
+      return { aaguid, passwordManager: "Unknown authenticator" };
     } catch { return { aaguid: null, passwordManager: "Unknown authenticator" }; }
   }
 
-  return { AAGUID_MANAGERS, inspectAttestation };
+  async function lookupMetadata(aaguid, fetchImpl = fetch) {
+    if (!aaguid) return null;
+    const response = await fetchImpl(`/api/metadata/${encodeURIComponent(aaguid)}`);
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("FIDO Metadata Service lookup failed");
+    return response.json();
+  }
+
+  return { inspectAttestation, lookupMetadata };
 });
