@@ -1,25 +1,35 @@
 const { readFile } = require("node:fs/promises");
 const { join } = require("node:path");
 
-const CONVENIENCE_METADATA_PATH = join(__dirname, "convenience-metadata.json");
+const METADATA_BLOB_PATH = join(__dirname, "blob.jwt");
 
-function normalizeEntries(document) {
-  const source = document.entries || document.aaguids || document;
-  if (Array.isArray(source)) return source;
-  if (!source || typeof source !== "object") throw new Error("Authenticator convenience metadata has an invalid format");
-  return Object.entries(source)
-    .filter(([, metadata]) => metadata && typeof metadata === "object")
-    .map(([aaguid, metadata]) => ({ aaguid, ...metadata }));
+function parseMetadataBlob(blob) {
+  const parts = blob.trim().split(".");
+  if (parts.length !== 3 || !parts[1]) throw new Error("FIDO metadata BLOB has an invalid JWT format");
+
+  let payload;
+  try {
+    payload = JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+  } catch {
+    throw new Error("FIDO metadata BLOB has an invalid payload");
+  }
+  if (!Array.isArray(payload.entries)) throw new Error("FIDO metadata BLOB has no entries");
+  return payload.entries;
 }
 
 function normalizeEntry(entry) {
-  const name = entry.name || entry.friendlyName || entry.friendlyNames?.["en-US"] ||
-    Object.values(entry.friendlyNames || {})[0] || entry.description || null;
-  const icon = entry.icon || entry.icon_light || entry.iconLight || null;
-  return { aaguid: entry.aaguid, name, description: name, icon };
+  const statement = entry.metadataStatement || {};
+  const name = statement.friendlyNames?.["en-US"] ||
+    Object.values(statement.friendlyNames || {})[0] || statement.description || null;
+  return {
+    aaguid: entry.aaguid,
+    name,
+    description: statement.description || name,
+    icon: statement.icon || null
+  };
 }
 
-function createMetadataService({ readFileImpl = readFile, metadataPath = CONVENIENCE_METADATA_PATH } = {}) {
+function createMetadataService({ readFileImpl = readFile, metadataPath = METADATA_BLOB_PATH } = {}) {
   let cachedEntries = null;
   let pendingRequest = null;
 
@@ -27,9 +37,8 @@ function createMetadataService({ readFileImpl = readFile, metadataPath = CONVENI
     if (cachedEntries) return cachedEntries;
     if (!pendingRequest) {
       pendingRequest = readFileImpl(metadataPath, "utf8")
-        .then((contents) => JSON.parse(contents))
-        .then((document) => {
-          cachedEntries = normalizeEntries(document);
+        .then((contents) => {
+          cachedEntries = parseMetadataBlob(contents);
           return cachedEntries;
         })
         .finally(() => { pendingRequest = null; });
@@ -46,4 +55,4 @@ function createMetadataService({ readFileImpl = readFile, metadataPath = CONVENI
   return { find };
 }
 
-module.exports = { CONVENIENCE_METADATA_PATH, createMetadataService, normalizeEntries };
+module.exports = { METADATA_BLOB_PATH, createMetadataService, parseMetadataBlob };
