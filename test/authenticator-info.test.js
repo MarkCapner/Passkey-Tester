@@ -27,6 +27,15 @@ test("looks up an AAGUID through the local metadata endpoint without using a cac
   assert.equal(metadata.icon, "data:image/svg+xml;base64,abc");
 });
 
+test("accepts a successful metadata lookup with no matching AAGUID", async () => {
+  const metadata = await lookupMetadata("d3452668-01fd-4c12-926c-83a4204853aa", async () => ({
+    ok: true,
+    status: 200,
+    json: async () => null
+  }));
+  assert.equal(metadata, null);
+});
+
 test("keeps an unrecognized AAGUID visible without guessing a provider", () => {
   const result = inspectAttestation(attestationWithAaguid("00000000-0000-0000-0000-000000000000"));
   assert.equal(result.aaguid, "00000000-0000-0000-0000-000000000000");
