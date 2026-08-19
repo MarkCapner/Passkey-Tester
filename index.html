@@ -14,6 +14,12 @@
   </header>
 
   <main>
+    <nav class="page-tabs" role="tablist" aria-label="Passkey Tester views">
+      <button class="page-tab active" role="tab" aria-selected="true" aria-controls="test-view" data-view="test">Test bench</button>
+      <button class="page-tab" role="tab" aria-selected="false" aria-controls="log-view" data-view="log">Results log <span class="log-count" id="logCount">0</span></button>
+    </nav>
+
+    <div class="page-view active" id="test-view" role="tabpanel">
     <section class="hero">
       <div class="eyebrow">WebAuthn test bench</div>
       <h1>See how your passkeys<br><em>really behave.</em></h1>
@@ -23,8 +29,8 @@
 
     <section class="workspace" aria-label="Passkey testing controls">
       <nav class="tabs" role="tablist">
-        <button class="tab active" role="tab" aria-selected="true" data-tab="create">Create passkey</button>
-        <button class="tab" role="tab" aria-selected="false" data-tab="authenticate">Authenticate</button>
+        <button class="tab operation-tab active" role="tab" aria-selected="true" data-tab="create">Create passkey</button>
+        <button class="tab operation-tab" role="tab" aria-selected="false" data-tab="authenticate">Authenticate</button>
       </nav>
 
       <div class="panel active" id="create-panel" role="tabpanel">
@@ -32,6 +38,21 @@
         <div class="editor-heading"><label for="createJson">PublicKeyCredentialCreationOptions (JSON)</label><div><button class="secondary" id="createReset">Reset example</button><button class="secondary" id="addExcluded">Exclude last credential</button></div></div>
         <textarea class="json-editor" id="createJson" spellcheck="false" aria-describedby="createJsonHint"></textarea>
         <p class="hint" id="createJsonHint">Add any WebAuthn option or extension. The challenge and user ID in the example are regenerated whenever it is reset.</p>
+        <label class="manager-field" for="passwordManager">Password manager / authenticator
+          <select id="passwordManager">
+            <option value="Not specified">Not specified</option>
+            <option value="Browser or device passkeys">Browser or device passkeys</option>
+            <option value="1Password">1Password</option>
+            <option value="Apple Passwords / iCloud Keychain">Apple Passwords / iCloud Keychain</option>
+            <option value="Bitwarden">Bitwarden</option>
+            <option value="Dashlane">Dashlane</option>
+            <option value="Google Password Manager">Google Password Manager</option>
+            <option value="Microsoft Password Manager">Microsoft Password Manager</option>
+            <option value="Physical security key">Physical security key</option>
+            <option value="Other">Other</option>
+          </select>
+          <small>Browsers do not reveal the selected provider, so choose it before running a test.</small>
+        </label>
         <button class="primary" id="createButton"><span>＋</span> Create passkey</button>
       </div>
 
@@ -50,9 +71,26 @@
       <div class="empty" id="emptyState"><div class="empty-icon">{ }</div><strong>Results will appear here</strong><span>Create or authenticate a passkey to inspect the browser response.</span></div>
       <div id="resultContent" hidden><div class="status-line" id="statusLine"></div><pre><code id="resultJson"></code></pre></div>
     </section>
+    </div>
+
+    <section class="page-view log-view" id="log-view" role="tabpanel" hidden>
+      <div class="log-header">
+        <div><div class="eyebrow">Local test history</div><h1>Results log</h1><p>Creation and authentication attempts, including include and exclude runs, are kept in this browser.</p></div>
+        <div class="log-actions"><button class="secondary" id="exportLog">Export JSON</button><button class="secondary danger" id="clearLog">Clear log</button></div>
+      </div>
+      <div class="log-summary" id="logSummary"></div>
+      <div class="log-empty" id="logEmpty"><div class="empty-icon">≡</div><strong>No test runs logged yet</strong><span>Run a create or authenticate test to add the first result.</span></div>
+      <div class="log-table-wrap" id="logTableWrap" hidden>
+        <table class="log-table">
+          <thead><tr><th>Date</th><th>Operation</th><th>Run</th><th>Password manager</th><th>Browser</th><th>Outcome</th><th>Error</th></tr></thead>
+          <tbody id="logRows"></tbody>
+        </table>
+      </div>
+    </section>
   </main>
   <footer><span>Private by design — no data leaves your browser.</span><span>Built with the Web Authentication API</span></footer>
   <script src="webauthn-json.js"></script>
+  <script src="activity-log.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

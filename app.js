@@ -1,5 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { credential: null, lastResult: null };
+const state = { credential: null, lastResult: null, log: [] };
+const browser = ActivityLog.browserName(navigator.userAgent, navigator.userAgentData?.brands);
 
 function randomBytes(length = 32) { return crypto.getRandomValues(new Uint8Array(length)); }
 function toBase64Url(value) {
@@ -37,6 +38,25 @@ function showError(error) {
   showResult(`${error.name || "Error"}: ${error.message}`, { name: error.name, message: error.message }, true);
 }
 function setBusy(button, busy) { button.disabled = busy; button.dataset.label ||= button.innerHTML; button.innerHTML = busy ? "Waiting for authenticator…" : button.dataset.label; }
+
+function safeEditorValue(selector) {
+  try { return readEditor(selector); } catch { return null; }
+}
+function recordRun(operation, request, outcome, error = null, credential = null) {
+  const entry = {
+    id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
+    timestamp: new Date().toISOString(),
+    operation,
+    run: ActivityLog.runKind(operation, request),
+    passwordManager: $("#passwordManager").value,
+    browser,
+    outcome,
+    credentialId: credential?.id || null,
+    error: error ? { name: error.name || "Error", message: error.message || String(error) } : null
+  };
+  state.log = ActivityLog.append(localStorage, entry);
+  renderLog();
+}
 
 function creationExample() {
   return {
@@ -82,27 +102,37 @@ function insertLastCredential(selector, property) {
 
 async function createPasskey() {
   const button = $("#createButton"); setBusy(button, true);
+  let input = safeEditorValue("#createJson");
   try {
     const request = prepareCredentialOptions("#createJson", "create");
+    input = request.input;
     const credential = await navigator.credentials.create(request.options);
     state.credential = credential;
     $("#savedHint").textContent = `Ready to authenticate credential ${credential.id.slice(0, 18)}…`;
     showResult("Passkey created successfully", { request: request.input, credential: serializedCredential(credential, "create") });
-  } catch (error) { showError(error); } finally { setBusy(button, false); }
+    recordRun("create", request.input, "Success", null, credential);
+  } catch (error) { showError(error); recordRun("create", input, "Error", error); } finally { setBusy(button, false); }
 }
 
 async function authenticatePasskey() {
   const button = $("#authButton"); setBusy(button, true);
+  let input = safeEditorValue("#authJson");
   try {
     const request = prepareCredentialOptions("#authJson", "get");
+    input = request.input;
     const credential = await navigator.credentials.get(request.options);
     showResult("Authentication completed successfully", { request: request.input, credential: serializedCredential(credential, "authenticate") });
-  } catch (error) { showError(error); } finally { setBusy(button, false); }
+    recordRun("authenticate", request.input, "Success", null, credential);
+  } catch (error) { showError(error); recordRun("authenticate", input, "Error", error); } finally { setBusy(button, false); }
 }
 
-document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
-  document.querySelectorAll(".tab").forEach((item) => { const active = item === tab; item.classList.toggle("active", active); item.setAttribute("aria-selected", active); });
+document.querySelectorAll(".operation-tab").forEach((tab) => tab.addEventListener("click", () => {
+  document.querySelectorAll(".operation-tab").forEach((item) => { const active = item === tab; item.classList.toggle("active", active); item.setAttribute("aria-selected", active); });
   document.querySelectorAll(".panel").forEach((panel) => { const active = panel.id === `${tab.dataset.tab}-panel`; panel.classList.toggle("active", active); panel.hidden = !active; });
+}));
+document.querySelectorAll(".page-tab").forEach((tab) => tab.addEventListener("click", () => {
+  document.querySelectorAll(".page-tab").forEach((item) => { const active = item === tab; item.classList.toggle("active", active); item.setAttribute("aria-selected", active); });
+  document.querySelectorAll(".page-view").forEach((view) => { const active = view.id === `${tab.dataset.view}-view`; view.classList.toggle("active", active); view.hidden = !active; });
 }));
 $("#createButton").addEventListener("click", createPasskey);
 $("#authButton").addEventListener("click", authenticatePasskey);
@@ -112,8 +142,37 @@ $("#addExcluded").addEventListener("click", () => insertLastCredential("#createJ
 $("#addAllowed").addEventListener("click", () => insertLastCredential("#authJson", "allowCredentials"));
 $("#clearButton").addEventListener("click", () => { state.lastResult = null; $("#emptyState").hidden = false; $("#resultContent").hidden = true; });
 $("#copyButton").addEventListener("click", async () => { if (!state.lastResult) return; await navigator.clipboard.writeText(JSON.stringify(state.lastResult, null, 2)); $("#copyButton").textContent = "Copied!"; setTimeout(() => { $("#copyButton").textContent = "Copy JSON"; }, 1200); });
+$("#passwordManager").addEventListener("change", () => localStorage.setItem("passkey-tester.password-manager", $("#passwordManager").value));
+$("#clearLog").addEventListener("click", () => {
+  if (!confirm("Clear every saved test result from this browser?")) return;
+  localStorage.removeItem(ActivityLog.STORAGE_KEY); state.log = []; renderLog();
+});
+$("#exportLog").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(state.log, null, 2)], { type: "application/json" });
+  const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = `passkey-test-log-${new Date().toISOString().slice(0, 10)}.json`; link.click(); URL.revokeObjectURL(link.href);
+});
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[character]);
+}
+function renderLog() {
+  const successes = state.log.filter((entry) => entry.outcome === "Success").length;
+  const errors = state.log.length - successes;
+  $("#logCount").textContent = state.log.length;
+  $("#logSummary").innerHTML = `<div><strong>${state.log.length}</strong><span>Total runs</span></div><div><strong>${successes}</strong><span>Successful</span></div><div><strong>${errors}</strong><span>Errors</span></div>`;
+  $("#logEmpty").hidden = state.log.length > 0;
+  $("#logTableWrap").hidden = state.log.length === 0;
+  $("#logRows").innerHTML = state.log.map((entry) => {
+    const error = entry.error ? `<strong>${escapeHtml(entry.error.name)}</strong><span>${escapeHtml(entry.error.message)}</span>` : '<span class="muted">—</span>';
+    return `<tr><td><time datetime="${escapeHtml(entry.timestamp)}">${escapeHtml(new Date(entry.timestamp).toLocaleString())}</time></td><td class="capitalize">${escapeHtml(entry.operation)}</td><td><span class="run-badge">${escapeHtml(entry.run)}</span></td><td>${escapeHtml(entry.passwordManager)}</td><td>${escapeHtml(entry.browser)}</td><td><span class="outcome ${entry.outcome === "Success" ? "success" : "failure"}">${escapeHtml(entry.outcome)}</span></td><td class="error-cell">${error}</td></tr>`;
+  }).join("");
+}
 
 (async () => {
+  state.log = ActivityLog.read(localStorage);
+  const savedManager = localStorage.getItem("passkey-tester.password-manager");
+  if (savedManager && [...$("#passwordManager").options].some((option) => option.value === savedManager)) $("#passwordManager").value = savedManager;
+  renderLog();
   setEditor("#createJson", creationExample());
   setEditor("#authJson", requestExample());
   const supported = window.isSecureContext && "PublicKeyCredential" in window;
@@ -122,6 +181,6 @@ $("#copyButton").addEventListener("click", async () => { if (!state.lastResult) 
   const support = $("#support"); support.classList.add(supported ? "good" : "bad");
   support.querySelector(".support-icon").textContent = supported ? "✓" : "!";
   support.querySelector("strong").textContent = supported ? "WebAuthn is supported" : "WebAuthn is unavailable";
-  support.querySelector("small").textContent = supported ? `${platform ? "Platform authenticator detected" : "Try a security key or password manager"} · ${navigator.userAgentData?.brands?.[0]?.brand || navigator.userAgent.split(" ").at(-1)}` : "Open this page on localhost in a modern browser";
+  support.querySelector("small").textContent = supported ? `${platform ? "Platform authenticator detected" : "Try a security key or password manager"} · ${browser}` : "Open this page on localhost in a modern browser";
   $("#createButton").disabled = !supported; $("#authButton").disabled = !supported;
 })();
