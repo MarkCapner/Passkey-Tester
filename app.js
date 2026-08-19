@@ -42,6 +42,21 @@ function setBusy(button, busy) { button.disabled = busy; button.dataset.label ||
 function safeEditorValue(selector) {
   try { return readEditor(selector); } catch { return null; }
 }
+async function syncCollection(path, localRecords) {
+  try {
+    const migrationKey = `passkey-tester.shared${path}.v1`;
+    if (!localStorage.getItem(migrationKey) && localRecords.length) {
+      const migration = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(localRecords) });
+      if (!migration.ok) throw new Error(`Migration failed (${migration.status})`);
+    }
+    const response = await fetch(path);
+    if (!response.ok) throw new Error(`Sync failed (${response.status})`);
+    localStorage.setItem(migrationKey, "true");
+    return await response.json();
+  } catch {
+    return localRecords;
+  }
+}
 function recordRun(operation, request, outcome, error = null, credential = null) {
   const entry = {
     id: crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
@@ -56,6 +71,7 @@ function recordRun(operation, request, outcome, error = null, credential = null)
   };
   state.log = ActivityLog.append(localStorage, entry);
   renderLog();
+  fetch("/api/activity", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) }).catch(() => {});
 }
 
 function creationExample() {
@@ -99,6 +115,7 @@ function saveCredential(credential, details = {}) {
     aaguid: details.aaguid || null
   };
   state.credentials = CredentialStore.save(localStorage, record);
+  fetch("/api/credentials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(record) }).catch(() => {});
   return record;
 }
 function renderCredentialPicker() {
@@ -183,8 +200,9 @@ $("#addAllowed").addEventListener("click", () => insertLastCredential("#authJson
 $("#clearButton").addEventListener("click", () => { state.lastResult = null; $("#emptyState").hidden = false; $("#resultContent").hidden = true; });
 $("#copyButton").addEventListener("click", async () => { if (!state.lastResult) return; await navigator.clipboard.writeText(JSON.stringify(state.lastResult, null, 2)); $("#copyButton").textContent = "Copied!"; setTimeout(() => { $("#copyButton").textContent = "Copy JSON"; }, 1200); });
 $("#clearLog").addEventListener("click", () => {
-  if (!confirm("Clear every saved test result from this browser?")) return;
+  if (!confirm("Clear every saved test result from all browsers?")) return;
   localStorage.removeItem(ActivityLog.STORAGE_KEY); state.log = []; renderLog();
+  fetch("/api/activity", { method: "DELETE" }).catch(() => {});
 });
 $("#exportLog").addEventListener("click", () => {
   const blob = new Blob([JSON.stringify(state.log, null, 2)], { type: "application/json" });
@@ -210,6 +228,12 @@ function renderLog() {
 (async () => {
   state.log = ActivityLog.read(localStorage);
   state.credentials = CredentialStore.read(localStorage);
+  [state.log, state.credentials] = await Promise.all([
+    syncCollection("/api/activity", state.log),
+    syncCollection("/api/credentials", state.credentials)
+  ]);
+  try { localStorage.setItem(ActivityLog.STORAGE_KEY, JSON.stringify(state.log)); } catch {}
+  try { localStorage.setItem(CredentialStore.STORAGE_KEY, JSON.stringify(state.credentials)); } catch {}
   renderCredentialPicker();
   renderLog();
   setEditor("#createJson", creationExample());

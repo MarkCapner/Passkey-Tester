@@ -28,7 +28,7 @@
       <div class="panel active" id="create-panel" role="tabpanel">
         <div class="panel-heading"><div><span class="step">01</span><h2>Create a new passkey</h2></div><p>Edit every public-key field, or wrap it in <code>{ "publicKey": { ... } }</code> to set outer credential options too. Binary fields use base64url strings.</p></div>
         <div class="editor-heading"><label for="createJson">PublicKeyCredentialCreationOptions (JSON)</label><div><button class="secondary" id="createReset">Reset example</button><button class="secondary" id="addExcluded">Choose excluded credentials</button></div></div>
-        <div class="credential-picker" id="excludePicker" hidden><div class="picker-heading"><strong>Exclude saved credentials</strong><button class="secondary" id="applyExcluded">Apply selection</button></div><div id="excludeChoices"></div><p>Authenticate discoverably once in each browser to save a synced passkey here.</p></div>
+        <div class="credential-picker" id="excludePicker" hidden><div class="picker-heading"><strong>Exclude saved credentials</strong><button class="secondary" id="applyExcluded">Apply selection</button></div><div id="excludeChoices"></div><p>Credentials observed in any browser using this server are available here.</p></div>
         <textarea class="json-editor" id="createJson" spellcheck="false" aria-describedby="createJsonHint"></textarea>
         <p class="hint" id="createJsonHint">Add any WebAuthn option or extension. The challenge and user ID in the example are regenerated whenever it is reset.</p>
         <div class="detected-manager"><img id="detectedManagerIcon" hidden alt=""><div><strong id="detectedManager">Authenticator detected after creation</strong><small id="detectedAaguid">The AAGUID in the attestation response is used automatically.</small></div></div>
@@ -54,7 +54,7 @@
 
     <section class="page-view log-view" id="log-view" role="tabpanel" hidden>
       <div class="log-header">
-        <div><div class="eyebrow">Local test history</div><h1>Results log</h1><p>Creation and authentication attempts, including include and exclude runs, are kept in this browser.</p></div>
+        <div><div class="eyebrow">Shared test history</div><h1>Results log</h1><p>Creation and authentication attempts, including include and exclude runs, are shared across browsers using this server.</p></div>
         <div class="log-actions"><button class="secondary" id="exportLog">Export JSON</button><button class="secondary danger" id="clearLog">Clear log</button></div>
       </div>
       <div class="log-summary" id="logSummary"></div>
@@ -67,7 +67,7 @@
       </div>
     </section>
   </main>
-  <footer><span>Credential data stays in your browser.</span><span>Built with the Web Authentication API</span></footer>
+  <footer><span>Credential IDs and test history stay on this local server.</span><span>Built with the Web Authentication API</span></footer>
   <script src="webauthn-json.js"></script>
   <script src="activity-log.js"></script>
   <script src="authenticator-info.js"></script>

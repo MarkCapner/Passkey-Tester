@@ -2,14 +2,45 @@ const http = require("node:http");
 const { readFile } = require("node:fs/promises");
 const { extname, isAbsolute, relative, resolve } = require("node:path");
 const { createMetadataService } = require("./metadata-service");
+const { createSharedStore } = require("./shared-store");
 
 const port = Number(process.env.PORT) || 4173;
 const root = __dirname;
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
 
-function createServer({ metadataService = createMetadataService() } = {}) {
+function sendJson(response, status, body) {
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+  response.end(JSON.stringify(body));
+}
+
+async function jsonBody(request) {
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk;
+    if (body.length > 1_000_000) throw new Error("Request body is too large");
+  }
+  return JSON.parse(body || "{}");
+}
+
+function createServer({ metadataService = createMetadataService(), sharedStore = createSharedStore(resolve(root, "data", "shared-state.json")) } = {}) {
   return http.createServer(async (request, response) => {
     const pathname = new URL(request.url, "http://localhost").pathname;
+    const collection = { "/api/activity": "activity", "/api/credentials": "credentials" }[pathname];
+    if (collection) {
+      try {
+        if (request.method === "GET") return sendJson(response, 200, await sharedStore.list(collection));
+        if (request.method === "POST") {
+          const body = await jsonBody(request);
+          const records = Array.isArray(body) ? body : [body];
+          if (records.some((record) => !record || typeof record.id !== "string")) return sendJson(response, 400, { error: "Every record must have an id" });
+          return sendJson(response, 200, await sharedStore.merge(collection, records));
+        }
+        if (request.method === "DELETE" && collection === "activity") return sendJson(response, 200, await sharedStore.clearActivity());
+        return sendJson(response, 405, { error: "Method not allowed" });
+      } catch (error) {
+        return sendJson(response, error instanceof SyntaxError ? 400 : 500, { error: error.message });
+      }
+    }
     const metadataMatch = pathname.match(/^\/api\/metadata\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
     if (metadataMatch) {
       try {
