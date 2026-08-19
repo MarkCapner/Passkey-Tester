@@ -35,24 +35,11 @@
 
       <div class="panel active" id="create-panel" role="tabpanel">
         <div class="panel-heading"><div><span class="step">01</span><h2>Create a new passkey</h2></div><p>Edit every public-key field, or wrap it in <code>{ "publicKey": { ... } }</code> to set outer credential options too. Binary fields use base64url strings.</p></div>
-        <div class="editor-heading"><label for="createJson">PublicKeyCredentialCreationOptions (JSON)</label><div><button class="secondary" id="createReset">Reset example</button><button class="secondary" id="addExcluded">Exclude last credential</button></div></div>
+        <div class="editor-heading"><label for="createJson">PublicKeyCredentialCreationOptions (JSON)</label><div><button class="secondary" id="createReset">Reset example</button><button class="secondary" id="addExcluded">Choose excluded credentials</button></div></div>
+        <div class="credential-picker" id="excludePicker" hidden><div class="picker-heading"><strong>Exclude saved credentials</strong><button class="secondary" id="applyExcluded">Apply selection</button></div><div id="excludeChoices"></div><p>Authenticate discoverably once in each browser to save a synced passkey here.</p></div>
         <textarea class="json-editor" id="createJson" spellcheck="false" aria-describedby="createJsonHint"></textarea>
         <p class="hint" id="createJsonHint">Add any WebAuthn option or extension. The challenge and user ID in the example are regenerated whenever it is reset.</p>
-        <label class="manager-field" for="passwordManager">Password manager / authenticator
-          <select id="passwordManager">
-            <option value="Not specified">Not specified</option>
-            <option value="Browser or device passkeys">Browser or device passkeys</option>
-            <option value="1Password">1Password</option>
-            <option value="Apple Passwords / iCloud Keychain">Apple Passwords / iCloud Keychain</option>
-            <option value="Bitwarden">Bitwarden</option>
-            <option value="Dashlane">Dashlane</option>
-            <option value="Google Password Manager">Google Password Manager</option>
-            <option value="Microsoft Password Manager">Microsoft Password Manager</option>
-            <option value="Physical security key">Physical security key</option>
-            <option value="Other">Other</option>
-          </select>
-          <small>Browsers do not reveal the selected provider, so choose it before running a test.</small>
-        </label>
+        <div class="detected-manager"><strong id="detectedManager">Authenticator detected after creation</strong><small id="detectedAaguid">The AAGUID in the attestation response is used automatically.</small></div>
         <button class="primary" id="createButton"><span>＋</span> Create passkey</button>
       </div>
 
@@ -91,6 +78,8 @@
   <footer><span>Private by design — no data leaves your browser.</span><span>Built with the Web Authentication API</span></footer>
   <script src="webauthn-json.js"></script>
   <script src="activity-log.js"></script>
+  <script src="authenticator-info.js"></script>
+  <script src="credential-store.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
