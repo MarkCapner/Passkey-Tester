@@ -17,9 +17,10 @@ test("extracts an AAGUID without relying on a hard-coded provider map", () => {
   });
 });
 
-test("looks up an AAGUID through the local metadata endpoint", async () => {
-  const metadata = await lookupMetadata("b5397666-4885-aa6b-cebf-e52262a439a2", async (url) => {
+test("looks up an AAGUID through the local metadata endpoint without using a cached response", async () => {
+  const metadata = await lookupMetadata("b5397666-4885-aa6b-cebf-e52262a439a2", async (url, options) => {
     assert.equal(url, "/api/metadata/b5397666-4885-aa6b-cebf-e52262a439a2");
+    assert.deepEqual(options, { cache: "no-store" });
     return { ok: true, status: 200, json: async () => ({ description: "Example authenticator" }) };
   });
   assert.equal(metadata.description, "Example authenticator");
