@@ -27,7 +27,10 @@ PORT=8080 npm start
 - Authentication using the last credential or any discoverable credential
 - Browser response fields, extensions, transports, and client data
 - Fully editable creation and authentication option JSON, including exclude/allow credential lists and extension inputs
+- A persistent, exportable results log showing the browser, selected password manager, include/exclude mode, outcome, and error details for every attempt
 
 The JSON editors use the standard WebAuthn JSON representation: binary fields such as `challenge`, `user.id`, and credential descriptor IDs are base64url strings. Use **Exclude last credential** or **Allow last credential** to insert the credential created during the current session, or paste any base64url credential ID yourself. Both editors accept either the `publicKey` options directly or a `{ "publicKey": { ... } }` wrapper.
 
 > This is a browser API diagnostic tool, not a production relying party. It intentionally has no backend and does not verify signatures or persist public keys.
+
+The WebAuthn API does not expose which password manager fulfilled a request. Select the password manager or authenticator in the test bench before running a test so the local results log can label it accurately. Test history is stored only in the current browser's local storage and can be exported or cleared from the **Results log** tab.
