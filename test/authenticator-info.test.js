@@ -21,9 +21,10 @@ test("looks up an AAGUID through the local metadata endpoint without using a cac
   const metadata = await lookupMetadata("b5397666-4885-aa6b-cebf-e52262a439a2", async (url, options) => {
     assert.equal(url, "/api/metadata/b5397666-4885-aa6b-cebf-e52262a439a2");
     assert.deepEqual(options, { cache: "no-store" });
-    return { ok: true, status: 200, json: async () => ({ description: "Example authenticator" }) };
+    return { ok: true, status: 200, json: async () => ({ name: "Example authenticator", icon: "data:image/svg+xml;base64,abc" }) };
   });
-  assert.equal(metadata.description, "Example authenticator");
+  assert.equal(metadata.name, "Example authenticator");
+  assert.equal(metadata.icon, "data:image/svg+xml;base64,abc");
 });
 
 test("keeps an unrecognized AAGUID visible without guessing a provider", () => {

@@ -22,6 +22,8 @@ h1 em { color:var(--orange); font-weight:500; }
 .support-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:50%; background:#e4e5dd; font-weight:800; }
 .support.good .support-icon { background:#d6eddf; color:var(--green); }
 .support.bad .support-icon { background:#f4ddd3; color:#9a3d21; }
+.detected-manager img { width:36px; height:36px; object-fit:contain; flex:0 0 auto; }
+.detected-manager > div { min-width:0; }
 .support strong,.support small { display:block; }.support strong { font-size:13px; }.support small { color:var(--muted); margin-top:3px; font-size:11px; }
 .workspace,.results { border:1px solid #cccec5; background:var(--paper); border-radius:14px; box-shadow:0 12px 38px rgba(37,45,39,.06); overflow:hidden; }
 .tabs { height:58px; display:flex; border-bottom:1px solid var(--line); background:#f7f5ef; padding-left:22px; gap:28px; }
@@ -48,7 +50,7 @@ input:focus,select:focus,.json-editor:focus { border-color:var(--green); box-sha
 .primary { margin-top:26px; height:47px; border:0; padding:0 20px; border-radius:7px; color:white; background:var(--green); font:inherit; font-size:13px; font-weight:750; cursor:pointer; box-shadow:0 3px 0 #113c2c; }
 .primary:hover { background:#174b37; }.primary:disabled { opacity:.55; cursor:wait; }.primary span { margin-right:8px; color:var(--lime); }
 .hint { color:var(--muted); font-size:12px; margin:16px 0 0; }
-.detected-manager { max-width:520px; margin-top:22px; padding:13px 15px; border:1px solid var(--line); border-radius:7px; background:#f7f5ef; }
+.detected-manager { display:flex; align-items:center; gap:12px; max-width:520px; margin-top:22px; padding:13px 15px; border:1px solid var(--line); border-radius:7px; background:#f7f5ef; }
 .detected-manager strong,.detected-manager small { display:block; }.detected-manager strong { font-size:12px; }.detected-manager small { color:var(--muted); margin-top:4px; font-size:11px; }
 .credential-picker { margin:0 0 12px; padding:15px; border:1px solid var(--line); border-radius:8px; background:#f7f5ef; }
 .picker-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; font-size:12px; }

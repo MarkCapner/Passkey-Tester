@@ -129,15 +129,20 @@ async function createPasskey() {
     const detected = AuthenticatorInfo.inspectAttestation(credential.response.attestationObject);
     try {
       const metadata = await AuthenticatorInfo.lookupMetadata(detected.aaguid);
-      if (metadata?.description) detected.passwordManager = metadata.description;
+      if (metadata?.name || metadata?.description) detected.passwordManager = metadata.name || metadata.description;
+      detected.icon = metadata?.icon || null;
     } catch {
-      // Metadata is informational; creation still succeeds when MDS is unavailable.
+      // Metadata is informational; creation still succeeds when it is unavailable.
     }
     state.passwordManager = detected.passwordManager;
     state.aaguid = detected.aaguid;
     saveCredential(credential, detected);
     renderCredentialPicker();
     $("#detectedManager").textContent = detected.passwordManager;
+    const managerIcon = $("#detectedManagerIcon");
+    managerIcon.hidden = !detected.icon;
+    managerIcon.src = detected.icon || "";
+    managerIcon.alt = detected.icon ? `${detected.passwordManager} icon` : "";
     $("#detectedAaguid").textContent = detected.aaguid ? `AAGUID ${detected.aaguid}` : "No AAGUID was available in this attestation.";
     $("#savedHint").textContent = `Ready to authenticate credential ${credential.id.slice(0, 18)}…`;
     showResult("Passkey created successfully", { request: request.input, credential: serializedCredential(credential, "create") });

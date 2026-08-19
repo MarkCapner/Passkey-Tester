@@ -31,7 +31,7 @@
         <div class="credential-picker" id="excludePicker" hidden><div class="picker-heading"><strong>Exclude saved credentials</strong><button class="secondary" id="applyExcluded">Apply selection</button></div><div id="excludeChoices"></div><p>Authenticate discoverably once in each browser to save a synced passkey here.</p></div>
         <textarea class="json-editor" id="createJson" spellcheck="false" aria-describedby="createJsonHint"></textarea>
         <p class="hint" id="createJsonHint">Add any WebAuthn option or extension. The challenge and user ID in the example are regenerated whenever it is reset.</p>
-        <div class="detected-manager"><strong id="detectedManager">Authenticator detected after creation</strong><small id="detectedAaguid">The AAGUID in the attestation response is used automatically.</small></div>
+        <div class="detected-manager"><img id="detectedManagerIcon" hidden alt=""><div><strong id="detectedManager">Authenticator detected after creation</strong><small id="detectedAaguid">The AAGUID in the attestation response is used automatically.</small></div></div>
         <button class="primary" id="createButton"><span>＋</span> Create passkey</button>
       </div>
 
