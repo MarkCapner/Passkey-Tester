@@ -15,6 +15,13 @@ test("resolves AAGUID metadata through the server endpoint", async () => {
   const response = await fetch(`${origin}/api/metadata/b5397666-4885-aa6b-cebf-e52262a439a2`);
   assert.equal(response.status, 200);
   assert.equal((await response.json()).description, "Test authenticator");
+  assert.equal(response.headers.get("cache-control"), "public, max-age=86400");
+});
+
+test("does not cache an AAGUID that is absent from the current metadata", async () => {
+  const response = await fetch(`${origin}/api/metadata/d3452668-01fd-4c12-926c-83a4204853aa`);
+  assert.equal(response.status, 404);
+  assert.equal(response.headers.get("cache-control"), "no-store");
 });
 
 after(async () => {

@@ -14,7 +14,12 @@ function createServer({ metadataService = createMetadataService() } = {}) {
     if (metadataMatch) {
       try {
         const metadata = await metadataService.find(metadataMatch[1]);
-        response.writeHead(metadata ? 200 : 404, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "public, max-age=86400" });
+        response.writeHead(metadata ? 200 : 404, {
+          "Content-Type": "application/json; charset=utf-8",
+          // A missing AAGUID may appear in a later MDS release. Do not let a
+          // browser's disk cache preserve that transient negative result.
+          "Cache-Control": metadata ? "public, max-age=86400" : "no-store"
+        });
         response.end(JSON.stringify(metadata || { error: "AAGUID not found in FIDO Metadata Service" }));
       } catch (error) {
         response.writeHead(502, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
