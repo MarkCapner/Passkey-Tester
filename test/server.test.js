@@ -32,7 +32,10 @@ test("serves the application entry point", async () => {
   const response = await fetch(`${origin}/`);
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type"), /^text\/html/);
-  assert.match(await response.text(), /Passkey Tester/);
+  const html = await response.text();
+  assert.match(html, /Passkey Tester/);
+  assert.match(html, /<section class="page-view active" id="test-view" role="tabpanel">[\s\S]*?<div class="workspace"[\s\S]*?<div class="results"/);
+  assert.match(html, /<section class="page-view log-view" id="log-view" role="tabpanel" hidden>/);
 });
 
 test("serves JavaScript and CSS assets instead of rejecting them", async () => {

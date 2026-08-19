@@ -19,7 +19,8 @@
       <button class="page-tab" role="tab" aria-selected="false" aria-controls="log-view" data-view="log">Results log <span class="log-count" id="logCount">0</span></button>
     </nav>
 
-    <section class="workspace" aria-label="Passkey testing controls">
+    <section class="page-view active" id="test-view" role="tabpanel">
+      <div class="workspace" aria-label="Passkey testing controls">
       <nav class="tabs" role="tablist">
         <button class="tab operation-tab active" role="tab" aria-selected="true" data-tab="create">Create passkey</button>
         <button class="tab operation-tab" role="tab" aria-selected="false" data-tab="authenticate">Authenticate</button>
@@ -43,14 +44,14 @@
         <button class="primary" id="authButton"><span>→</span> Authenticate passkey</button>
         <p class="hint" id="savedHint">No credential has been created in this session yet.</p>
       </div>
-    </section>
+      </div>
 
-    <section class="results" id="results" aria-live="polite">
-      <div class="results-title"><div><span class="step">03</span><h2>Response inspector</h2></div><div class="result-actions"><button id="copyButton">Copy JSON</button><button id="clearButton">Clear</button></div></div>
-      <div class="empty" id="emptyState"><div class="empty-icon">{ }</div><strong>Results will appear here</strong><span>Create or authenticate a passkey to inspect the browser response.</span></div>
-      <div id="resultContent" hidden><div class="status-line" id="statusLine"></div><pre><code id="resultJson"></code></pre></div>
+      <div class="results" id="results" aria-live="polite">
+        <div class="results-title"><div><span class="step">03</span><h2>Response inspector</h2></div><div class="result-actions"><button id="copyButton">Copy JSON</button><button id="clearButton">Clear</button></div></div>
+        <div class="empty" id="emptyState"><div class="empty-icon">{ }</div><strong>Results will appear here</strong><span>Create or authenticate a passkey to inspect the browser response.</span></div>
+        <div id="resultContent" hidden><div class="status-line" id="statusLine"></div><pre><code id="resultJson"></code></pre></div>
+      </div>
     </section>
-    </div>
 
     <section class="page-view log-view" id="log-view" role="tabpanel" hidden>
       <div class="log-header">
