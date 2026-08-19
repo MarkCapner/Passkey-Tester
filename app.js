@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { credential: null, credentials: [], lastResult: null, log: [], passwordManager: "Unknown authenticator", aaguid: null };
+const state = { credentials: [], lastResult: null, log: [], passwordManager: "Unknown authenticator", aaguid: null };
 const browser = ActivityLog.browserName(navigator.userAgent, navigator.userAgentData?.brands);
 
 function randomBytes(length = 32) { return crypto.getRandomValues(new Uint8Array(length)); }
@@ -100,13 +100,6 @@ function prepareCredentialOptions(selector, operation) {
   const outerOptions = input.publicKey ? input : {};
   return { input, options: { ...outerOptions, publicKey: WebAuthnJson.parseOptionsFromJson(publicKeyJson, operation) } };
 }
-function credentialDescriptor() {
-  if (!state.credential) throw new Error("Create a passkey first before inserting its credential ID.");
-  const descriptor = { type: "public-key", id: toBase64Url(state.credential.rawId) };
-  const transports = transportInfo(state.credential.response);
-  if (transports.length) descriptor.transports = transports;
-  return descriptor;
-}
 function saveCredential(credential, details = {}) {
   const record = {
     id: toBase64Url(credential.rawId),
@@ -119,7 +112,9 @@ function saveCredential(credential, details = {}) {
   return record;
 }
 function renderCredentialPicker() {
-  $("#excludeChoices").innerHTML = state.credentials.length ? state.credentials.map((record) => `<label><input type="checkbox" value="${escapeHtml(record.id)}"><span>${escapeHtml(record.passwordManager)}<small>${escapeHtml(record.id.slice(0, 24))}… · last used ${escapeHtml(new Date(record.lastUsed).toLocaleString())}</small></span></label>`).join("") : '<span class="muted">No saved credentials yet.</span>';
+  const choices = state.credentials.length ? state.credentials.map((record) => `<label><input type="checkbox" value="${escapeHtml(record.id)}"><span>${escapeHtml(record.passwordManager)}<small>${escapeHtml(record.id.slice(0, 24))}… · last used ${escapeHtml(new Date(record.lastUsed).toLocaleString())}</small></span></label>`).join("") : '<span class="muted">No saved credentials yet.</span>';
+  $("#excludeChoices").innerHTML = choices;
+  $("#allowChoices").innerHTML = choices;
 }
 function applyExcludedCredentials() {
   try {
@@ -131,10 +126,16 @@ function applyExcludedCredentials() {
     $("#excludePicker").hidden = true;
   } catch (error) { showError(error); }
 }
-function insertLastCredential(selector, property) {
-  try { const input = readEditor(selector); (input.publicKey || input)[property] = [credentialDescriptor()]; setEditor(selector, input); } catch (error) { showError(error); }
+function applyAllowedCredentials() {
+  try {
+    const input = readEditor("#authJson");
+    const options = input.publicKey || input;
+    const ids = [...document.querySelectorAll("#allowChoices input:checked")].map((input) => input.value);
+    options.allowCredentials = CredentialStore.descriptors(state.credentials, ids);
+    setEditor("#authJson", input);
+    $("#allowPicker").hidden = true;
+  } catch (error) { showError(error); }
 }
-
 async function createPasskey() {
   const button = $("#createButton"); setBusy(button, true);
   let input = safeEditorValue("#createJson");
@@ -142,7 +143,6 @@ async function createPasskey() {
     const request = prepareCredentialOptions("#createJson", "create");
     input = request.input;
     const credential = await navigator.credentials.create(request.options);
-    state.credential = credential;
     const detected = AuthenticatorInfo.inspectAttestation(credential.response.attestationObject);
     try {
       const metadata = await AuthenticatorInfo.lookupMetadata(detected.aaguid);
@@ -196,7 +196,8 @@ $("#createReset").addEventListener("click", () => setEditor("#createJson", creat
 $("#authReset").addEventListener("click", () => setEditor("#authJson", requestExample()));
 $("#addExcluded").addEventListener("click", () => { renderCredentialPicker(); $("#excludePicker").hidden = !$("#excludePicker").hidden; });
 $("#applyExcluded").addEventListener("click", applyExcludedCredentials);
-$("#addAllowed").addEventListener("click", () => insertLastCredential("#authJson", "allowCredentials"));
+$("#addAllowed").addEventListener("click", () => { renderCredentialPicker(); $("#allowPicker").hidden = !$("#allowPicker").hidden; });
+$("#applyAllowed").addEventListener("click", applyAllowedCredentials);
 $("#clearButton").addEventListener("click", () => { state.lastResult = null; $("#emptyState").hidden = false; $("#resultContent").hidden = true; });
 $("#copyButton").addEventListener("click", async () => { if (!state.lastResult) return; await navigator.clipboard.writeText(JSON.stringify(state.lastResult, null, 2)); $("#copyButton").textContent = "Copied!"; setTimeout(() => { $("#copyButton").textContent = "Copy JSON"; }, 1200); });
 $("#clearLog").addEventListener("click", () => {
