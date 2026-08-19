@@ -49,7 +49,9 @@
 
   async function lookupMetadata(aaguid, fetchImpl = fetch) {
     if (!aaguid) return null;
-    const response = await fetchImpl(`/api/metadata/${encodeURIComponent(aaguid)}`);
+    // Always revalidate lookups so a previously cached 404 cannot keep an AAGUID
+    // unknown after it is added to the metadata service.
+    const response = await fetchImpl(`/api/metadata/${encodeURIComponent(aaguid)}`, { cache: "no-store" });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error("FIDO Metadata Service lookup failed");
     return response.json();
