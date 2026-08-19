@@ -14,13 +14,17 @@ function createServer({ metadataService = createMetadataService() } = {}) {
     if (metadataMatch) {
       try {
         const metadata = await metadataService.find(metadataMatch[1]);
-        response.writeHead(metadata ? 200 : 404, {
+        // An unknown AAGUID is a successful lookup with no result, not a
+        // missing HTTP resource. Returning JSON null also avoids reporting an
+        // expected metadata miss as a failed request in browser developer
+        // tools.
+        response.writeHead(200, {
           "Content-Type": "application/json; charset=utf-8",
           // A missing AAGUID may appear in a later MDS release. Do not let a
           // browser's disk cache preserve that transient negative result.
           "Cache-Control": metadata ? "public, max-age=86400" : "no-store"
         });
-        response.end(JSON.stringify(metadata || { error: "AAGUID not found in FIDO metadata BLOB" }));
+        response.end(JSON.stringify(metadata));
       } catch (error) {
         response.writeHead(502, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
         response.end(JSON.stringify({ error: "FIDO metadata BLOB unavailable" }));

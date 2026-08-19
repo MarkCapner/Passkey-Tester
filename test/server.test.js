@@ -18,10 +18,11 @@ test("resolves AAGUID metadata through the server endpoint", async () => {
   assert.equal(response.headers.get("cache-control"), "public, max-age=86400");
 });
 
-test("does not cache an AAGUID that is absent from the current metadata", async () => {
+test("returns a successful, uncached null result for an absent AAGUID", async () => {
   const response = await fetch(`${origin}/api/metadata/d3452668-01fd-4c12-926c-83a4204853aa`);
-  assert.equal(response.status, 404);
+  assert.equal(response.status, 200);
   assert.equal(response.headers.get("cache-control"), "no-store");
+  assert.equal(await response.json(), null);
 });
 
 after(async () => {
