@@ -48,8 +48,13 @@ input:focus,select:focus,.json-editor:focus { border-color:var(--green); box-sha
 .primary { margin-top:26px; height:47px; border:0; padding:0 20px; border-radius:7px; color:white; background:var(--green); font:inherit; font-size:13px; font-weight:750; cursor:pointer; box-shadow:0 3px 0 #113c2c; }
 .primary:hover { background:#174b37; }.primary:disabled { opacity:.55; cursor:wait; }.primary span { margin-right:8px; color:var(--lime); }
 .hint { color:var(--muted); font-size:12px; margin:16px 0 0; }
-.manager-field { max-width:440px; margin-top:22px; }
-.manager-field small { color:var(--muted); font-weight:400; line-height:1.45; letter-spacing:0; }
+.detected-manager { max-width:520px; margin-top:22px; padding:13px 15px; border:1px solid var(--line); border-radius:7px; background:#f7f5ef; }
+.detected-manager strong,.detected-manager small { display:block; }.detected-manager strong { font-size:12px; }.detected-manager small { color:var(--muted); margin-top:4px; font-size:11px; }
+.credential-picker { margin:0 0 12px; padding:15px; border:1px solid var(--line); border-radius:8px; background:#f7f5ef; }
+.picker-heading { display:flex; justify-content:space-between; align-items:center; margin-bottom:9px; font-size:12px; }
+.credential-picker label { display:flex; align-items:flex-start; gap:9px; padding:8px 4px; border-top:1px solid #e1e1d9; font-size:12px; font-weight:600; cursor:pointer; }
+.credential-picker input { width:16px; height:16px; flex:none; accent-color:var(--green); }.credential-picker label small { display:block; color:var(--muted); margin-top:2px; font-weight:400; }
+.credential-picker>p { color:var(--muted); margin:10px 0 0; font-size:11px; }
 .results { margin-top:28px; }.results-title { min-height:72px; padding:20px 38px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
 .result-actions { display:flex; gap:7px; }.result-actions button { background:#faf9f5; border:1px solid var(--line); padding:7px 10px; border-radius:6px; font-size:11px; cursor:pointer; }
 .empty { min-height:220px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--muted); gap:7px; }.empty-icon { font-family:monospace; color:#8b9690; border:1px dashed #bfc4be; padding:12px; border-radius:50%; margin-bottom:4px; }.empty strong { color:#48514d; font-size:13px; }.empty span { font-size:11px; }

@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { credential: null, lastResult: null, log: [] };
+const state = { credential: null, credentials: [], lastResult: null, log: [], passwordManager: "Unknown authenticator", aaguid: null };
 const browser = ActivityLog.browserName(navigator.userAgent, navigator.userAgentData?.brands);
 
 function randomBytes(length = 32) { return crypto.getRandomValues(new Uint8Array(length)); }
@@ -48,7 +48,7 @@ function recordRun(operation, request, outcome, error = null, credential = null)
     timestamp: new Date().toISOString(),
     operation,
     run: ActivityLog.runKind(operation, request),
-    passwordManager: $("#passwordManager").value,
+    passwordManager: state.passwordManager,
     browser,
     outcome,
     credentialId: credential?.id || null,
@@ -91,13 +91,31 @@ function credentialDescriptor() {
   if (transports.length) descriptor.transports = transports;
   return descriptor;
 }
-function insertLastCredential(selector, property) {
+function saveCredential(credential, details = {}) {
+  const record = {
+    id: toBase64Url(credential.rawId),
+    transports: transportInfo(credential.response),
+    passwordManager: details.passwordManager || state.credentials.find((item) => item.id === credential.id)?.passwordManager || "Unknown authenticator",
+    aaguid: details.aaguid || null
+  };
+  state.credentials = CredentialStore.save(localStorage, record);
+  return record;
+}
+function renderCredentialPicker() {
+  $("#excludeChoices").innerHTML = state.credentials.length ? state.credentials.map((record) => `<label><input type="checkbox" value="${escapeHtml(record.id)}"><span>${escapeHtml(record.passwordManager)}<small>${escapeHtml(record.id.slice(0, 24))}… · last used ${escapeHtml(new Date(record.lastUsed).toLocaleString())}</small></span></label>`).join("") : '<span class="muted">No saved credentials yet.</span>';
+}
+function applyExcludedCredentials() {
   try {
-    const input = readEditor(selector);
+    const input = readEditor("#createJson");
     const options = input.publicKey || input;
-    options[property] = [credentialDescriptor()];
-    setEditor(selector, input);
+    const ids = [...document.querySelectorAll("#excludeChoices input:checked")].map((input) => input.value);
+    options.excludeCredentials = CredentialStore.descriptors(state.credentials, ids);
+    setEditor("#createJson", input);
+    $("#excludePicker").hidden = true;
   } catch (error) { showError(error); }
+}
+function insertLastCredential(selector, property) {
+  try { const input = readEditor(selector); (input.publicKey || input)[property] = [credentialDescriptor()]; setEditor(selector, input); } catch (error) { showError(error); }
 }
 
 async function createPasskey() {
@@ -108,6 +126,13 @@ async function createPasskey() {
     input = request.input;
     const credential = await navigator.credentials.create(request.options);
     state.credential = credential;
+    const detected = AuthenticatorInfo.inspectAttestation(credential.response.attestationObject);
+    state.passwordManager = detected.passwordManager;
+    state.aaguid = detected.aaguid;
+    saveCredential(credential, detected);
+    renderCredentialPicker();
+    $("#detectedManager").textContent = detected.passwordManager;
+    $("#detectedAaguid").textContent = detected.aaguid ? `AAGUID ${detected.aaguid}` : "No AAGUID was available in this attestation.";
     $("#savedHint").textContent = `Ready to authenticate credential ${credential.id.slice(0, 18)}…`;
     showResult("Passkey created successfully", { request: request.input, credential: serializedCredential(credential, "create") });
     recordRun("create", request.input, "Success", null, credential);
@@ -121,6 +146,9 @@ async function authenticatePasskey() {
     const request = prepareCredentialOptions("#authJson", "get");
     input = request.input;
     const credential = await navigator.credentials.get(request.options);
+    const saved = saveCredential(credential);
+    state.passwordManager = saved.passwordManager;
+    renderCredentialPicker();
     showResult("Authentication completed successfully", { request: request.input, credential: serializedCredential(credential, "authenticate") });
     recordRun("authenticate", request.input, "Success", null, credential);
   } catch (error) { showError(error); recordRun("authenticate", input, "Error", error); } finally { setBusy(button, false); }
@@ -138,11 +166,11 @@ $("#createButton").addEventListener("click", createPasskey);
 $("#authButton").addEventListener("click", authenticatePasskey);
 $("#createReset").addEventListener("click", () => setEditor("#createJson", creationExample()));
 $("#authReset").addEventListener("click", () => setEditor("#authJson", requestExample()));
-$("#addExcluded").addEventListener("click", () => insertLastCredential("#createJson", "excludeCredentials"));
+$("#addExcluded").addEventListener("click", () => { renderCredentialPicker(); $("#excludePicker").hidden = !$("#excludePicker").hidden; });
+$("#applyExcluded").addEventListener("click", applyExcludedCredentials);
 $("#addAllowed").addEventListener("click", () => insertLastCredential("#authJson", "allowCredentials"));
 $("#clearButton").addEventListener("click", () => { state.lastResult = null; $("#emptyState").hidden = false; $("#resultContent").hidden = true; });
 $("#copyButton").addEventListener("click", async () => { if (!state.lastResult) return; await navigator.clipboard.writeText(JSON.stringify(state.lastResult, null, 2)); $("#copyButton").textContent = "Copied!"; setTimeout(() => { $("#copyButton").textContent = "Copy JSON"; }, 1200); });
-$("#passwordManager").addEventListener("change", () => localStorage.setItem("passkey-tester.password-manager", $("#passwordManager").value));
 $("#clearLog").addEventListener("click", () => {
   if (!confirm("Clear every saved test result from this browser?")) return;
   localStorage.removeItem(ActivityLog.STORAGE_KEY); state.log = []; renderLog();
@@ -170,8 +198,8 @@ function renderLog() {
 
 (async () => {
   state.log = ActivityLog.read(localStorage);
-  const savedManager = localStorage.getItem("passkey-tester.password-manager");
-  if (savedManager && [...$("#passwordManager").options].some((option) => option.value === savedManager)) $("#passwordManager").value = savedManager;
+  state.credentials = CredentialStore.read(localStorage);
+  renderCredentialPicker();
   renderLog();
   setEditor("#createJson", creationExample());
   setEditor("#authJson", requestExample());
