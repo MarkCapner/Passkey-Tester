@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { credential: null, lastResult: null };
+const state = { credential: null, lastResult: null, passkeys: [], selectedCredentialIds: new Set() };
 
 function randomBytes(length = 32) { return crypto.getRandomValues(new Uint8Array(length)); }
 function toBase64Url(value) {
@@ -71,6 +71,62 @@ function credentialDescriptor() {
   if (transports.length) descriptor.transports = transports;
   return descriptor;
 }
+function storedDescriptor(passkey) {
+  const descriptor = { type: "public-key", id: passkey.credentialId };
+  if (passkey.transports?.length) descriptor.transports = passkey.transports;
+  return descriptor;
+}
+function applySelectedCredentials() {
+  for (const [selector, property] of [["#createJson", "excludeCredentials"], ["#authJson", "allowCredentials"]]) {
+    try {
+      const input = readEditor(selector);
+      const options = input.publicKey || input;
+      const loggedIds = new Set(state.passkeys.map((item) => item.credentialId));
+      const retained = (options[property] || []).filter((item) => !loggedIds.has(item.id));
+      const selected = state.passkeys.filter((item) => state.selectedCredentialIds.has(item.credentialId)).map(storedDescriptor);
+      options[property] = [...retained, ...selected];
+      setEditor(selector, input);
+    } catch (error) { showError(error); }
+  }
+}
+function renderPasskeys() {
+  const list = $("#passkeyList");
+  list.replaceChildren();
+  if (!state.passkeys.length) {
+    const empty = document.createElement("span"); empty.className = "hint";
+    empty.textContent = "No passkeys logged yet. Create one to add it here."; list.append(empty); return;
+  }
+  state.passkeys.forEach((passkey) => {
+    const label = document.createElement("label"); label.className = "passkey-choice";
+    const checkbox = document.createElement("input"); checkbox.type = "checkbox";
+    checkbox.checked = state.selectedCredentialIds.has(passkey.credentialId);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) state.selectedCredentialIds.add(passkey.credentialId); else state.selectedCredentialIds.delete(passkey.credentialId);
+      applySelectedCredentials();
+    });
+    const details = document.createElement("span");
+    const name = document.createElement("strong"); name.textContent = passkey.passwordManager;
+    const id = document.createElement("small"); id.textContent = `${passkey.aaguid} · ${passkey.credentialId.slice(0, 18)}…`;
+    details.append(name, id); label.append(checkbox, details); list.append(label);
+  });
+}
+async function loadPasskeys() {
+  const response = await fetch("/api/passkeys");
+  if (!response.ok) throw new Error("Could not load the passkey log.");
+  state.passkeys = await response.json(); renderPasskeys();
+}
+async function logPasskey(credential) {
+  const aaguid = Aaguid.fromCredential(credential);
+  if (!aaguid) throw new Error("This browser did not expose attested authenticator data, so its AAGUID could not be logged.");
+  const response = await fetch("/api/passkeys", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
+    credentialId: toBase64Url(credential.rawId), aaguid, passwordManager: Aaguid.provider(aaguid), transports: transportInfo(credential.response)
+  }) });
+  if (!response.ok) throw new Error("The passkey was created, but its log entry could not be saved.");
+  const saved = await response.json();
+  state.passkeys = state.passkeys.filter((item) => item.credentialId !== saved.credentialId).concat(saved);
+  state.selectedCredentialIds.add(saved.credentialId); renderPasskeys(); applySelectedCredentials();
+  return saved;
+}
 function insertLastCredential(selector, property) {
   try {
     const input = readEditor(selector);
@@ -87,7 +143,8 @@ async function createPasskey() {
     const credential = await navigator.credentials.create(request.options);
     state.credential = credential;
     $("#savedHint").textContent = `Ready to authenticate credential ${credential.id.slice(0, 18)}…`;
-    showResult("Passkey created successfully", { request: request.input, credential: serializedCredential(credential, "create") });
+    const record = await logPasskey(credential);
+    showResult(`Passkey created and logged as ${record.passwordManager}`, { request: request.input, credential: serializedCredential(credential, "create"), passkeyLog: record });
   } catch (error) { showError(error); } finally { setBusy(button, false); }
 }
 
@@ -106,8 +163,8 @@ document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click",
 }));
 $("#createButton").addEventListener("click", createPasskey);
 $("#authButton").addEventListener("click", authenticatePasskey);
-$("#createReset").addEventListener("click", () => setEditor("#createJson", creationExample()));
-$("#authReset").addEventListener("click", () => setEditor("#authJson", requestExample()));
+$("#createReset").addEventListener("click", () => { setEditor("#createJson", creationExample()); applySelectedCredentials(); });
+$("#authReset").addEventListener("click", () => { setEditor("#authJson", requestExample()); applySelectedCredentials(); });
 $("#addExcluded").addEventListener("click", () => insertLastCredential("#createJson", "excludeCredentials"));
 $("#addAllowed").addEventListener("click", () => insertLastCredential("#authJson", "allowCredentials"));
 $("#clearButton").addEventListener("click", () => { state.lastResult = null; $("#emptyState").hidden = false; $("#resultContent").hidden = true; });
@@ -116,6 +173,7 @@ $("#copyButton").addEventListener("click", async () => { if (!state.lastResult) 
 (async () => {
   setEditor("#createJson", creationExample());
   setEditor("#authJson", requestExample());
+  try { await loadPasskeys(); } catch (error) { $("#passkeyList").textContent = error.message; }
   const supported = window.isSecureContext && "PublicKeyCredential" in window;
   let platform = false;
   if (supported && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable) platform = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();

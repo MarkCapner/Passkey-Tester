@@ -17,7 +17,7 @@
     <section class="hero">
       <div class="eyebrow">WebAuthn test bench</div>
       <h1>See how your passkeys<br><em>really behave.</em></h1>
-      <p>Create and authenticate passkeys across browsers and password managers. Everything stays in this browser.</p>
+      <p>Create and authenticate passkeys across browsers and password managers. The local service keeps a credential log on this machine.</p>
       <div class="support" id="support"><span class="support-icon">…</span><div><strong>Checking this browser</strong><small>WebAuthn capability detection is running</small></div></div>
     </section>
 
@@ -26,6 +26,11 @@
         <button class="tab active" role="tab" aria-selected="true" data-tab="create">Create passkey</button>
         <button class="tab" role="tab" aria-selected="false" data-tab="authenticate">Authenticate</button>
       </nav>
+
+      <section class="passkey-log" aria-labelledby="passkeyLogTitle">
+        <div><span class="step">⌁</span><div><h2 id="passkeyLogTitle">Saved passkeys</h2><p>Select logged credentials to apply them to both operations.</p></div></div>
+        <div id="passkeyList" class="passkey-list"><span class="hint">Loading passkey log…</span></div>
+      </section>
 
       <div class="panel active" id="create-panel" role="tabpanel">
         <div class="panel-heading"><div><span class="step">01</span><h2>Create a new passkey</h2></div><p>Edit every public-key field, or wrap it in <code>{ "publicKey": { ... } }</code> to set outer credential options too. Binary fields use base64url strings.</p></div>
@@ -51,8 +56,9 @@
       <div id="resultContent" hidden><div class="status-line" id="statusLine"></div><pre><code id="resultJson"></code></pre></div>
     </section>
   </main>
-  <footer><span>Private by design — no data leaves your browser.</span><span>Built with the Web Authentication API</span></footer>
+  <footer><span>Private by design — credential metadata stays on this local service.</span><span>Built with the Web Authentication API</span></footer>
   <script src="webauthn-json.js"></script>
+  <script src="aaguid.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
