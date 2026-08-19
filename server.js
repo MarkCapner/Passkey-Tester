@@ -20,10 +20,10 @@ function createServer({ metadataService = createMetadataService() } = {}) {
           // browser's disk cache preserve that transient negative result.
           "Cache-Control": metadata ? "public, max-age=86400" : "no-store"
         });
-        response.end(JSON.stringify(metadata || { error: "AAGUID not found in authenticator convenience metadata" }));
+        response.end(JSON.stringify(metadata || { error: "AAGUID not found in FIDO metadata BLOB" }));
       } catch (error) {
         response.writeHead(502, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
-        response.end(JSON.stringify({ error: "Authenticator convenience metadata unavailable" }));
+        response.end(JSON.stringify({ error: "FIDO metadata BLOB unavailable" }));
       }
       return;
     }

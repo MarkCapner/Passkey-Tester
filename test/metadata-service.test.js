@@ -1,25 +1,41 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { CONVENIENCE_METADATA_PATH, createMetadataService, normalizeEntries } = require("../metadata-service");
+const { METADATA_BLOB_PATH, createMetadataService, parseMetadataBlob } = require("../metadata-service");
 
-test("normalizes AAGUID-keyed convenience metadata", () => {
-  assert.deepEqual(normalizeEntries({ no: 1, ABC: { name: "Authenticator name" } }), [
-    { aaguid: "ABC", name: "Authenticator name" }
-  ]);
+function jwt(payload) {
+  return `${Buffer.from('{"alg":"RS256"}').toString("base64url")}.${Buffer.from(JSON.stringify(payload)).toString("base64url")}.signature`;
+}
+
+test("decodes entries from a FIDO metadata BLOB JWT", () => {
+  const entries = [{ aaguid: "ABC", metadataStatement: { description: "Authenticator" } }];
+  assert.deepEqual(parseMetadataBlob(jwt({ no: 1, entries })), entries);
 });
 
-test("reads local convenience metadata once and resolves names and icons by AAGUID", async () => {
+test("rejects malformed FIDO metadata BLOBs", () => {
+  assert.throws(() => parseMetadataBlob("not-a-jwt"), /invalid JWT format/);
+  assert.throws(() => parseMetadataBlob("header.!!!.signature"), /invalid payload/);
+  assert.throws(() => parseMetadataBlob(jwt({ no: 1 })), /no entries/);
+});
+
+test("reads the local BLOB once and resolves nested metadata by AAGUID", async () => {
   let reads = 0;
   const service = createMetadataService({ readFileImpl: async (path, encoding) => {
     reads++;
-    assert.equal(path, CONVENIENCE_METADATA_PATH);
+    assert.equal(path, METADATA_BLOB_PATH);
     assert.equal(encoding, "utf8");
-    return JSON.stringify({ ABC: { friendlyNames: { "en-US": "Authenticator name" }, icon_light: "data:image/svg+xml;base64,abc" } });
+    return jwt({ entries: [{
+      aaguid: "ABC",
+      metadataStatement: {
+        friendlyNames: { "en-US": "Authenticator name" },
+        description: "Authenticator description",
+        icon: "data:image/svg+xml;base64,abc"
+      }
+    }] });
   } });
   assert.deepEqual(await service.find("abc"), {
     aaguid: "ABC",
     name: "Authenticator name",
-    description: "Authenticator name",
+    description: "Authenticator description",
     icon: "data:image/svg+xml;base64,abc"
   });
   assert.equal(await service.find("missing"), null);
