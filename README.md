@@ -2,21 +2,39 @@
 
 A small, dependency-free WebAuthn test bench for comparing passkey behavior across browsers, operating systems, security keys, and password managers. All credential operations and response inspection happen locally in the browser.
 
-## Run locally
+## Run over HTTPS (including other devices)
 
-You need Node.js 18 or newer.
+You need Node.js 18 or newer and OpenSSL. The first start creates a private local certificate authority and a server certificate containing `localhost` and the computer's current LAN IPv4 addresses, then listens on all network interfaces:
 
 ```bash
 npm start
 ```
 
-Then open [http://localhost:4173](http://localhost:4173). Browsers treat `localhost` as a secure context, which is required by WebAuthn.
+The terminal prints the available URLs. On the computer running the server you can use [https://localhost:4173](https://localhost:4173). To use a phone, tablet, or another computer:
+
+1. Copy `certs/passkey-tester-ca.crt` to that device. Do **not** copy either `.key` file.
+2. Install that certificate as a trusted root/CA certificate. On iOS/iPadOS, also enable full trust under **Settings > General > About > Certificate Trust Settings**. On Android, install it as a **CA certificate** in the device's security settings. Managed devices may prevent installing a user CA.
+3. Connect the device to the same network and open one of the printed LAN URLs, such as `https://192.168.1.25:4173`.
+4. If it cannot connect, allow inbound TCP port 4173 in the server computer's firewall and make sure the Wi-Fi network does not isolate clients.
+
+The browser must show a trusted HTTPS connection before WebAuthn/passkeys will work. A warning page that you click through is not sufficient on every browser. The generated CA private key can issue certificates trusted by your devices, so keep `certs/passkey-tester-ca.key` private and remove the installed CA when you no longer need it.
+
+If the server computer's LAN address changes, replace the certificate so its subject alternative names contain the new address, then restart:
+
+```bash
+npm run certificates -- --force
+npm start
+```
+
+You will need to install the newly generated CA certificate on the client devices again. Passkeys are scoped to the exact relying-party ID (the hostname or IP address), so consistently use the same URL if you want to authenticate with a passkey registered earlier.
 
 To use another port:
 
 ```bash
 PORT=8080 npm start
 ```
+
+To bind to a particular interface instead of every interface, set `HOST` as well (for example, `HOST=192.168.1.25 npm start`). The certificate is independent of the port.
 
 ## What you can test
 

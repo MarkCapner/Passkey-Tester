@@ -4,6 +4,8 @@
   "private": true,
   "description": "A dependency-free local WebAuthn and passkey test bench",
   "scripts": {
+    "certificates": "node scripts/generate-certificates.js",
+    "prestart": "npm run certificates",
     "start": "node server.js",
     "test": "node --test"
   },
