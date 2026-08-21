@@ -245,6 +245,6 @@ function renderLog() {
   const support = $("#support"); support.classList.add(supported ? "good" : "bad");
   support.querySelector(".support-icon").textContent = supported ? "✓" : "!";
   support.querySelector("strong").textContent = supported ? "WebAuthn is supported" : "WebAuthn is unavailable";
-  support.querySelector("small").textContent = supported ? `${platform ? "Platform authenticator detected" : "Try a security key or password manager"} · ${browser}` : "Open this page on localhost in a modern browser";
+  support.querySelector("small").textContent = supported ? `${platform ? "Platform authenticator detected" : "Try a security key or password manager"} · ${browser}` : "Open this page over trusted HTTPS in a modern browser";
   $("#createButton").disabled = !supported; $("#authButton").disabled = !supported;
 })();

@@ -1,10 +1,13 @@
 const http = require("node:http");
+const https = require("node:https");
 const { readFile } = require("node:fs/promises");
+const { networkInterfaces } = require("node:os");
 const { extname, isAbsolute, relative, resolve } = require("node:path");
 const { createMetadataService } = require("./metadata-service");
 const { createSharedStore } = require("./shared-store");
 
 const port = Number(process.env.PORT) || 4173;
+const host = process.env.HOST || "0.0.0.0";
 const root = __dirname;
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
 
@@ -22,8 +25,8 @@ async function jsonBody(request) {
   return JSON.parse(body || "{}");
 }
 
-function createServer({ metadataService = createMetadataService(), sharedStore = createSharedStore(resolve(root, "data", "shared-state.json")) } = {}) {
-  return http.createServer(async (request, response) => {
+function requestHandler({ metadataService, sharedStore }) {
+  return async (request, response) => {
     const pathname = new URL(request.url, "http://localhost").pathname;
     const collection = { "/api/activity": "activity", "/api/credentials": "credentials" }[pathname];
     if (collection) {
@@ -79,12 +82,35 @@ function createServer({ metadataService = createMetadataService(), sharedStore =
     } catch {
       response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
     }
-  });
+  };
+}
+
+function createServer({ metadataService = createMetadataService(), sharedStore = createSharedStore(resolve(root, "data", "shared-state.json")), tls } = {}) {
+  const handler = requestHandler({ metadataService, sharedStore });
+  return tls ? https.createServer(tls, handler) : http.createServer(handler);
+}
+
+function networkUrls(listenPort) {
+  const addresses = new Set(["localhost"]);
+  for (const interfaces of Object.values(networkInterfaces())) {
+    for (const address of interfaces || []) {
+      if (address.family === "IPv4" && !address.internal) addresses.add(address.address);
+    }
+  }
+  return [...addresses].map((address) => `https://${address}:${listenPort}`);
 }
 
 if (require.main === module) {
-  createServer().listen(port, "127.0.0.1", () => {
-    console.log(`Passkey Tester running at http://localhost:${port}`);
+  Promise.all([
+    readFile(resolve(root, "certs", "passkey-tester.key")),
+    readFile(resolve(root, "certs", "passkey-tester.crt"))
+  ]).then(([key, cert]) => {
+    createServer({ tls: { key, cert } }).listen(port, host, () => {
+      console.log(`Passkey Tester is available at:\n${networkUrls(port).map((url) => `  ${url}`).join("\n")}`);
+    });
+  }).catch((error) => {
+    console.error(`Unable to start HTTPS: ${error.message}\nRun \"npm run certificates\" to create the local certificates.`);
+    process.exitCode = 1;
   });
 }
 

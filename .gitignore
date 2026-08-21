@@ -1,2 +1,4 @@
 data/shared-state.json
 data/*.tmp
+certs/*
+!certs/README.md
