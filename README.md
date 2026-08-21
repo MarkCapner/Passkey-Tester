@@ -4,7 +4,7 @@ A small, dependency-free WebAuthn test bench for comparing passkey behavior acro
 
 ## Run over HTTPS (including other devices)
 
-You need Node.js 18 or newer and OpenSSL. The first start creates a private local certificate authority and a server certificate containing `localhost` and the computer's current LAN IPv4 addresses, then listens on all network interfaces:
+You need Node.js 18 or newer and OpenSSL. On Windows, Git for Windows includes a compatible OpenSSL executable; the certificate script automatically checks its standard installation locations even when it is not on `PATH`. You can also point to another installation in PowerShell with `$env:OPENSSL_PATH = "C:\\path\\to\\openssl.exe"`. The first start creates a private local certificate authority and a server certificate containing `localhost` and the computer's current LAN IPv4 addresses, then listens on all network interfaces:
 
 ```bash
 npm start
