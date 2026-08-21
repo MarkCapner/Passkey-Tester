@@ -6,7 +6,7 @@ const { extname, isAbsolute, relative, resolve } = require("node:path");
 const { createMetadataService } = require("./metadata-service");
 const { createSharedStore } = require("./shared-store");
 
-const port = Number(process.env.PORT) || 4173;
+const port = Number(process.env.PORT) || 443;
 const host = process.env.HOST || "0.0.0.0";
 const root = __dirname;
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".js": "text/javascript; charset=utf-8" };
@@ -91,13 +91,14 @@ function createServer({ metadataService = createMetadataService(), sharedStore =
 }
 
 function networkUrls(listenPort) {
-  const addresses = new Set(["localhost"]);
+  const addresses = new Set(["passkey-tester.com", "localhost"]);
   for (const interfaces of Object.values(networkInterfaces())) {
     for (const address of interfaces || []) {
       if (address.family === "IPv4" && !address.internal) addresses.add(address.address);
     }
   }
-  return [...addresses].map((address) => `https://${address}:${listenPort}`);
+  const portSuffix = listenPort === 443 ? "" : `:${listenPort}`;
+  return [...addresses].map((address) => `https://${address}${portSuffix}`);
 }
 
 if (require.main === module) {
@@ -114,4 +115,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createServer };
+module.exports = { createServer, networkUrls };

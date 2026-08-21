@@ -1,6 +1,15 @@
 const assert = require("node:assert/strict");
 const { test } = require("node:test");
-const { opensslPath } = require("../scripts/generate-certificates");
+const { certificateSubjectAltNames, opensslPath } = require("../scripts/generate-certificates");
+
+test("creates a certificate valid for the public hostname and local development", () => {
+  assert.deepEqual(certificateSubjectAltNames(["127.0.0.1", "192.0.2.10"]), [
+    "DNS.1 = passkey-tester.com",
+    "DNS.2 = localhost",
+    "IP.1 = 127.0.0.1",
+    "IP.2 = 192.0.2.10"
+  ]);
+});
 
 test("uses an explicitly configured OpenSSL executable", () => {
   assert.equal(opensslPath({ environment: { OPENSSL_PATH: "D:\\OpenSSL\\openssl.exe" }, platform: "win32" }), "D:\\OpenSSL\\openssl.exe");

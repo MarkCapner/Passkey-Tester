@@ -1,6 +1,13 @@
 const assert = require("node:assert/strict");
 const { after, before, test } = require("node:test");
-const { createServer } = require("../server");
+const { createServer, networkUrls } = require("../server");
+
+test("uses clean URLs on the default HTTPS port", () => {
+  const urls = networkUrls(443);
+  assert.ok(urls.includes("https://passkey-tester.com"));
+  assert.ok(urls.includes("https://localhost"));
+  assert.ok(networkUrls(8443).includes("https://passkey-tester.com:8443"));
+});
 
 let server;
 let origin;

@@ -52,6 +52,14 @@ function localAddresses() {
   return [...addresses];
 }
 
+function certificateSubjectAltNames(addresses = localAddresses()) {
+  return [
+    "DNS.1 = passkey-tester.com",
+    "DNS.2 = localhost",
+    ...addresses.map((address, index) => `IP.${index + 1} = ${address}`)
+  ];
+}
+
 function generateCertificates() {
   mkdirSync(directory, { recursive: true });
 
@@ -66,12 +74,12 @@ function generateCertificates() {
 
   try {
     openssl("req", "-x509", "-newkey", "rsa:2048", "-sha256", "-nodes", "-days", "3650", "-keyout", caKey, "-out", caCertificate, "-subj", "/CN=Passkey Tester Local CA", "-addext", "basicConstraints=critical,CA:TRUE", "-addext", "keyUsage=critical,keyCertSign,cRLSign");
-    openssl("req", "-newkey", "rsa:2048", "-sha256", "-nodes", "-keyout", serverKey, "-out", request, "-subj", "/CN=Passkey Tester");
+    openssl("req", "-newkey", "rsa:2048", "-sha256", "-nodes", "-keyout", serverKey, "-out", request, "-subj", "/CN=passkey-tester.com");
 
-    const subjectAltNames = ["DNS.1 = localhost", ...localAddresses().map((address, index) => `IP.${index + 1} = ${address}`)];
+    const subjectAltNames = certificateSubjectAltNames();
     writeFileSync(extensions, `[server_certificate]\nbasicConstraints = critical,CA:FALSE\nkeyUsage = critical,digitalSignature,keyEncipherment\nextendedKeyUsage = serverAuth\nsubjectAltName = @alt_names\n\n[alt_names]\n${subjectAltNames.join("\n")}\n`);
     openssl("x509", "-req", "-sha256", "-days", "397", "-in", request, "-CA", caCertificate, "-CAkey", caKey, "-CAserial", serial, "-CAcreateserial", "-out", serverCertificate, "-extfile", extensions, "-extensions", "server_certificate");
-    console.log(`Created an HTTPS certificate for localhost and ${localAddresses().join(", ")}.`);
+    console.log(`Created an HTTPS certificate for passkey-tester.com, localhost, and ${localAddresses().join(", ")}.`);
     console.log(`Install and trust ${caCertificate} on each device that will use Passkey Tester.`);
   } finally {
     rmSync(request, { force: true });
@@ -82,4 +90,4 @@ function generateCertificates() {
 
 if (require.main === module) generateCertificates();
 
-module.exports = { opensslPath };
+module.exports = { certificateSubjectAltNames, opensslPath };
